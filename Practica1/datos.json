@@ -2134,27 +2134,27 @@
       "nivel": 1,
       "fecha_contrato": "2024-07-13"
     }
-  ]
+  ],
   "tipos_incidentes": [
     {
       "id_cli": "1",
-      "nombre": "Infecciones por código malicioso",
+      "nombre": "Infecciones por código malicioso"
     },
     {
       "id_cli": "2",
-      "nombre": "Intrusiones o intentos de intrusión",
+      "nombre": "Intrusiones o intentos de intrusión"
     },
     {
       "id_cli": "3",
-      "nombre": "Fallos de disponibilidad",
+      "nombre": "Fallos de disponibilidad"
     },
     {
       "id_cli": "4",
-      "nombre": "Compromiso de la información",
+      "nombre": "Compromiso de la información"
     },
     {
       "id_cli": "5",
-      "nombre": "Fraude",
-    },
-
+      "nombre": "Fraude"
+    }
+  ]
 }
