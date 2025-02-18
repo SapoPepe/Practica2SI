@@ -14,8 +14,7 @@ def crearBBDD():
     cur = con.cursor()
 
 
-    cur.execute("CREATE TABLE IF NOT EXISTS tickets_emitidos ("
-                "")
+    #cur.execute("CREATE TABLE IF NOT EXISTS tickets_emitidos (""")
 
 
     cur.execute("CREATE TABLE IF NOT EXISTS clientes ("
@@ -38,6 +37,9 @@ def crearBBDD():
                 ");")
 
     cur.execute("INSERT INTO tipos_incidentes(id_cli, nombre) VALUES ('1', 'Manolo')")
+
+    con.commit()
+    con.close()
 
 leerJSON()
 crearBBDD()
