@@ -6,12 +6,28 @@ def leerJSON(cur, con):
 
     for elemento in datos["clientes"]:
         contador = 1
-        clave = list(elemento.keys())[0]
-        print(clave)
-        cur.execute("INSERT INTO clientes (id_cli, nombre, provincia, telefono)"
+
+        cur.execute("INSERT OR IGNORE INTO clientes (id_cli, nombre, provincia, telefono)"
                 "VALUES ('%d', '%s', '%s', '%s')" % (int(elemento['id_cli']), elemento['nombre'], elemento['provincia'], elemento['telefono']))
         con.commit()
         contador += 1
+
+
+    for elemento in datos["tickets_emitidos"]:
+        cur.execute("INSERT OR IGNORE INTO tickets_emitidos (cliente, fecha_apertura, fecha_cierre, es_mantenimiento, satisfaccion_cliente, tipo_incidencia)"
+                    "VALUES ('%s', '%s', '%s', '%d', '%d', '%d')" % (elemento['cliente'], elemento['fecha_apertura'], elemento['fecha_cierre'], int(elemento['es_mantenimiento']), int(elemento['satisfaccion_cliente']), int(elemento['tipo_incidencia'])))
+        con.commit()
+
+    for elemento in datos["empleados"]:
+        cur.execute("INSERT OR IGNORE INTO empleados (fecha_contrato, id_emp, nivel, nombre)"
+                    "VALUES ('%s', '%d', '%d', '%s')" % (elemento['fecha_contrato'], int(elemento['id_emp']), int(elemento['nivel']), elemento['nombre']))
+        con.commit()
+
+
+    for elemento in datos["tipos_incidentes"]:
+        cur.execute("INSERT OR IGNORE INTO tipos_incidentes (id_cli, nombre)"
+                    "VALUES ('%d', '%s')" % (int(elemento['id_cli']), elemento['nombre']))
+        con.commit()
 
 
 
@@ -42,7 +58,7 @@ def crearBBDD():
 
     cur.execute("CREATE TABLE IF NOT EXISTS empleados ("
                 "fecha_contrato TEXT,"
-                "id_emp INTEGER PRIMARY KEY,"
+                "id_emp INTEGER,"
                 "nivel INTEGER,"
                 "nombre TEXT"
                 ");")
@@ -54,6 +70,7 @@ def crearBBDD():
     con.commit()
 
     leerJSON(cur, con)
+
 crearBBDD()
 
 
