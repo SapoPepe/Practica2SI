@@ -1,12 +1,22 @@
 import sqlite3
 import json
-def leerJSON():
+def leerJSON(cur, con):
     ficheroJSON = open('datos.json', 'r')
     datos = json.load(ficheroJSON)
-    print()
-    #print(datos)
-    #print(datos["tickets_emitidos"])
-    #print(datos["tipos_incidentes"])
+
+    for elemento in datos["clientes"]:
+        contador = 1
+        clave = list(elemento.keys())[0]
+        print(clave)
+        cur.execute("INSERT INTO clientes (id_cli, nombre, provincia, telefono)"
+                "VALUES ('%d', '%s', '%s', '%s')" % (int(elemento['id_cli']), elemento['nombre'], elemento['provincia'], elemento['telefono']))
+        con.commit()
+        contador += 1
+
+
+
+
+
 
 
 def crearBBDD():
@@ -14,7 +24,13 @@ def crearBBDD():
     cur = con.cursor()
 
 
-    #cur.execute("CREATE TABLE IF NOT EXISTS tickets_emitidos (""")
+    cur.execute("CREATE TABLE IF NOT EXISTS tickets_emitidos ("
+                "cliente TEXT, "
+                "fecha_apertura TEXT, "
+                "fecha_cierre TEXT, "
+                "es_mantenimiento INTEGER, "
+                "satisfaccion_cliente INTEGER, "
+                "tipo_incidencia INTEGER );")
 
 
     cur.execute("CREATE TABLE IF NOT EXISTS clientes ("
@@ -33,15 +49,13 @@ def crearBBDD():
 
     cur.execute("CREATE TABLE IF NOT EXISTS tipos_incidentes ("
                 "id_cli INTEGER,"
-                "nombre TEXT PRIMARY KEY"
+                "nombre TEXT "
                 ");")
-
-    cur.execute("INSERT INTO tipos_incidentes(id_cli, nombre) VALUES ('1', 'Manolo')")
-
     con.commit()
-    con.close()
 
-leerJSON()
+    leerJSON(cur, con)
 crearBBDD()
+
+
 
 

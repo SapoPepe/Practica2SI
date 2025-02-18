@@ -1,0 +1,74 @@
+{
+	"fichajes": [{
+		"1": {
+			"nombre": "Luis García",
+			"sucursal": "Madrid",
+			"departamento": "1"
+			},
+			"fechas": ["16/2/2024", "18/2/2024","20/2/2024"],
+			"sala": ["A", "B", "B"]
+		},
+		{
+		"2": {
+			"nombre": "María López",
+			"sucursal": "Barcelona",
+			"departamento": "2"
+			},
+			"fechas": ["16/2/2024", "17/2/2024", "18/2/2024", "19/2/2024", "20/2/2024"],
+			"sala": ["B", "B", "B", "A", "B"]
+		},
+		{
+		"3": {
+			"nombre": "Antonio Sánchez",
+			"sucursal": "Madrid",
+			"departamento": "2"
+			},
+			"fechas": ["17/2/2024", "18/2/2024", "19/2/2024", "20/2/2024"],
+			"sala": ["A", "A", "A", "A"]
+		},
+		{
+		"4": {
+			"nombre": "José Pérez",
+			"sucursal": "Madrid",
+			"departamento": "1"
+			},
+			"fechas": ["16/2/2024", "17/2/2024", "18/2/2024", "20/2/2024"],
+			"sala": ["A", "B", "A",  "B"]
+		},
+		{
+		"5": {
+			"nombre": "Ana Torres",
+			"sucursal": "Barcelona",
+			"departamento": "1"
+			},
+			"fechas": ["16/2/2024"],
+			"sala": ["A"]
+		},
+		{
+		"6": {
+			"nombre": "Fermín Reyero",
+			"sucursal": "Madrid",
+			"departamento": "2"
+			},
+			"fechas": ["16/2/2024", "17/2/2024", "18/2/2024", "19/2/2024", "20/2/2024"],
+			"sala": ["A", "B", "B", "B", "B"]
+		},
+		{
+		"7": {
+			"nombre": "Jorge López",
+			"sucursal": "Barcelona",
+			"departamento": "2"
+			},
+			"fechas": ["16/2/2024", "17/2/2024", "18/2/2024", "19/2/2024"],
+			"sala": ["A", "B", "A", "A"]
+		},
+		{
+		"8": {
+			"nombre": "Pedro Villanueva",
+			"sucursal": "Madrid",
+			"departamento": "2"
+			},
+			"fechas": ["16/2/2024", "19/2/2024", "20/2/2024"],
+			"sala": ["A", "A", "B"]
+		}]
+}
