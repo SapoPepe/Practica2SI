@@ -98,3 +98,4 @@ def calcular_metricas(con):
 
 con = crearBBDD()
 calcular_metricas(con)
+
