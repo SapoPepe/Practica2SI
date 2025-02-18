@@ -6,13 +6,9 @@ def leerJSON(cur, con):
     datos = json.load(ficheroJSON)
 
     for elemento in datos["clientes"]:
-        contador = 1
-
         cur.execute("INSERT OR IGNORE INTO clientes (id_cli, nombre, provincia, telefono)"
                 "VALUES ('%d', '%s', '%s', '%s')" % (int(elemento['id_cli']), elemento['nombre'], elemento['provincia'], elemento['telefono']))
         con.commit()
-        contador += 1
-
 
     for elemento in datos["tickets_emitidos"]:
         cur.execute("INSERT OR IGNORE INTO tickets_emitidos (cliente, fecha_apertura, fecha_cierre, es_mantenimiento, satisfaccion_cliente, tipo_incidencia)"
@@ -26,8 +22,8 @@ def leerJSON(cur, con):
 
 
     for elemento in datos["tipos_incidentes"]:
-        cur.execute("INSERT OR IGNORE INTO tipos_incidentes (id_cli, nombre)"
-                    "VALUES ('%d', '%s')" % (int(elemento['id_cli']), elemento['nombre']))
+        cur.execute("INSERT OR IGNORE INTO tipos_incidentes (id_incidencia, nombre)"
+                    "VALUES ('%d', '%s')" % (int(elemento['id_incidencia']), elemento['nombre']))
         con.commit()
 
 
@@ -65,7 +61,7 @@ def crearBBDD():
                 ");")
 
     cur.execute("CREATE TABLE IF NOT EXISTS tipos_incidentes ("
-                "id_cli INTEGER,"
+                "id_incidencia INTEGER,"
                 "nombre TEXT "
                 ");")
     con.commit()
@@ -82,6 +78,8 @@ def crearBBDD():
     print("Numero de Empleados: " + str(len(dataFrameEmpleados)))
     print("Numero de Tickets Emitidos: " + str(len(dataFrameTicketsEmitidos)))
     print("Numero de Tipos de Incidente: " + str(len(dataFrameTiposIncidentes)))
+
+
 
 
 crearBBDD()

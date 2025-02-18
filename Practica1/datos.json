@@ -2137,23 +2137,23 @@
   ],
   "tipos_incidentes": [
     {
-      "id_cli": "1",
+      "id_incidencia": "1",
       "nombre": "Infecciones por código malicioso"
     },
     {
-      "id_cli": "2",
+      "id_incidencia": "2",
       "nombre": "Intrusiones o intentos de intrusión"
     },
     {
-      "id_cli": "3",
+      "id_incidencia": "3",
       "nombre": "Fallos de disponibilidad"
     },
     {
-      "id_cli": "4",
+      "id_incidencia": "4",
       "nombre": "Compromiso de la información"
     },
     {
-      "id_cli": "5",
+      "id_incidencia": "5",
       "nombre": "Fraude"
     }
   ]
