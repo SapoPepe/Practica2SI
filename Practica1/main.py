@@ -71,6 +71,7 @@ def crearBBDD():
 
     print("Numero de Muestras:")
     dataFrameClientes = pd.DataFrame(cur.execute("SELECT * FROM clientes"))
+    print(dataFrameClientes)
     dataFrameEmpleados = pd.DataFrame(cur.execute("SELECT * FROM empleados"))
     dataFrameTicketsEmitidos = pd.DataFrame(cur.execute("SELECT * FROM tickets_emitidos"))
     dataFrameTiposIncidentes = pd.DataFrame(cur.execute("SELECT * FROM tipos_incidentes"))
@@ -78,13 +79,22 @@ def crearBBDD():
     print("Numero de Empleados: " + str(len(dataFrameEmpleados)))
     print("Numero de Tickets Emitidos: " + str(len(dataFrameTicketsEmitidos)))
     print("Numero de Tipos de Incidente: " + str(len(dataFrameTiposIncidentes)))
+    return con
 
+def calcular_metricas(con):
+    query = "SELECT * FROM tickets_emitidos"
+    tickets = pd.read_sql(query, con)
+    print("\nCalcular metricas\n")
+    print(tickets)
+    # 1
+    total_muestras = len(tickets)
+    print(f"Total de muestras: {total_muestras}")
 
+    # 2
+    incidentes_alta_valoracion = tickets[tickets['satisfaccion_cliente'] >= 5]
+    media_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].mean()
+    std_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].std()
+    print(f"Media valoración >=5: {media_valoracion:.2f} ± {std_valoracion:.2f}")
 
-
-crearBBDD()
-
-
-
-
-
+con = crearBBDD()
+calcular_metricas(con)
