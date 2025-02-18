@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import pandas as pd
 def leerJSON(cur, con):
     ficheroJSON = open('datos.json', 'r')
     datos = json.load(ficheroJSON)
@@ -71,7 +72,20 @@ def crearBBDD():
 
     leerJSON(cur, con)
 
+
+    print("Numero de Muestras:")
+    dataFrameClientes = pd.DataFrame(cur.execute("SELECT * FROM clientes"))
+    dataFrameEmpleados = pd.DataFrame(cur.execute("SELECT * FROM empleados"))
+    dataFrameTicketsEmitidos = pd.DataFrame(cur.execute("SELECT * FROM tickets_emitidos"))
+    dataFrameTiposIncidentes = pd.DataFrame(cur.execute("SELECT * FROM tipos_incidentes"))
+    print("Numero de Clientes: " + str(len(dataFrameClientes)))
+    print("Numero de Empleados: " + str(len(dataFrameEmpleados)))
+    print("Numero de Tickets Emitidos: " + str(len(dataFrameTicketsEmitidos)))
+    print("Numero de Tipos de Incidente: " + str(len(dataFrameTiposIncidentes)))
+
+
 crearBBDD()
+
 
 
 
