@@ -90,9 +90,8 @@ def crearBBDD():
 
     leerJSON(cur, con)
 
-    print("Numero de Muestras:")
+    print("---------------- Numero de Muestras ----------------")
     dataFrameClientes = pd.DataFrame(cur.execute("SELECT * FROM clientes"))
-    print(dataFrameClientes)
     dataFrameEmpleados = pd.DataFrame(cur.execute("SELECT * FROM empleados"))
     dataFrameTicketsEmitidos = pd.DataFrame(cur.execute("SELECT * FROM tickets_emitidos"))
     dataFrameTiposIncidentes = pd.DataFrame(cur.execute("SELECT * FROM tipos_incidentes"))
@@ -103,19 +102,36 @@ def crearBBDD():
     return con
 
 def calcular_metricas(con):
-    query = "SELECT * FROM tickets_emitidos"
-    tickets = pd.read_sql(query, con)
-    print("\nCalcular metricas\n")
-    print(tickets)
+    print("\n///////////////////////////////// Calcular metricas /////////////////////////////////\n")
+
+    print("---------------- Valoración >= 5 ----------------")
+    dataFrameMI5 = pd.read_sql("SELECT satisfaccion_cliente FROM tickets_emitidos", con)
+    media = round(dataFrameMI5.mean().values[0], 3)
+    desviacion_estandar = round(dataFrameMI5.std().values[0], 3)
+    print(f"Media: {media}\nDesviación estandar: {desviacion_estandar}")
+
+    print("---------------- Nº incidentes por cliente ----------------")
+    #Media y desviación estándar del total del número de incidentes por cliente.
+    incidentes_por_cliente = pd.read_sql("SELECT cliente, COUNT(*) AS num_incidentes FROM tickets_emitidos GROUP BY cliente", con)
+    media_incidentes = round(incidentes_por_cliente['num_incidentes'].mean(), 3)
+    desviacion_estandar_incidentes = round(incidentes_por_cliente['num_incidentes'].std(), 3)
+    print(f"Media: {media_incidentes}\nDesviación estandar: {desviacion_estandar_incidentes}")
+
+
+
+
+#    query = "SELECT * FROM tickets_emitidos"
+#    tickets = pd.read_sql(query, con)
+#    print(tickets)
     # 1
-    total_muestras = len(tickets)
-    print(f"Total de muestras: {total_muestras}")
+#    total_muestras = len(tickets)
+#    print(f"Total de muestras: {total_muestras}")
 
     # 2
-    incidentes_alta_valoracion = tickets[tickets['satisfaccion_cliente'] >= 5]
-    media_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].mean()
-    std_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].std()
-    print(f"Media valoración >=5: {media_valoracion:.2f} ± {std_valoracion:.2f}")
+#    incidentes_alta_valoracion = tickets[tickets['satisfaccion_cliente'] >= 5]
+#    media_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].mean()
+#    std_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].std()
+#    print(f"Media valoración >=5: {media_valoracion:.2f} ± {std_valoracion:.2f}")
 
 con = crearBBDD()
 calcular_metricas(con)
