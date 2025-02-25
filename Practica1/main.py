@@ -104,13 +104,13 @@ def crearBBDD():
 def calcular_metricas(con):
     print("\n///////////////////////////////// Calcular metricas /////////////////////////////////\n")
 
-    print("---------------- Valoración >= 5 ----------------")
+    print("\n---------------- Valoración >= 5 ----------------")
     dataFrameMI5 = pd.read_sql("SELECT satisfaccion_cliente FROM tickets_emitidos", con)
     media = round(dataFrameMI5.mean().values[0], 3)
     desviacion_estandar = round(dataFrameMI5.std().values[0], 3)
     print(f"Media: {media}\nDesviación estandar: {desviacion_estandar}")
 
-    print("---------------- Nº incidentes por cliente ----------------")
+    print("\n---------------- Nº incidentes por cliente ----------------")
     #Media y desviación estándar del total del número de incidentes por cliente.
     incidentes_por_cliente = pd.read_sql("SELECT cliente, COUNT(*) AS num_incidentes FROM tickets_emitidos GROUP BY cliente", con)
     media_incidentes = round(incidentes_por_cliente['num_incidentes'].mean(), 3)
@@ -118,20 +118,48 @@ def calcular_metricas(con):
     print(f"Media: {media_incidentes}\nDesviación estandar: {desviacion_estandar_incidentes}")
 
 
+    print("\n---------------- Horas totales por tipo de incidente ----------------")
+    dataframeHoras = pd.read_sql("SELECT t.id, c.tiempo FROM tickets_emitidos t JOIN contactos_con_empleados c ON t.id = c.id_ticket", con)
+    resultado = dataframeHoras.groupby('id').agg(
+        media=('tiempo', 'mean'),
+        desviacion=('tiempo', 'std')
+    ).reset_index()
+    print(resultado)
 
 
-#    query = "SELECT * FROM tickets_emitidos"
-#    tickets = pd.read_sql(query, con)
-#    print(tickets)
-    # 1
-#    total_muestras = len(tickets)
-#    print(f"Total de muestras: {total_muestras}")
+    print("\n---------------- Min y Max del total de horas realizadas por los empleados ----------------")
+    dataframeHorasEmp = pd.read_sql("SELECT id_emp, tiempo FROM contactos_con_empleados", con)
+    resultado = dataframeHorasEmp.groupby('id_emp').agg(
+        total_horas = ('tiempo', 'sum')
+    )
+    print(f"Max: {max(resultado["total_horas"])}\nMin: {min(resultado["total_horas"])}")
 
-    # 2
-#    incidentes_alta_valoracion = tickets[tickets['satisfaccion_cliente'] >= 5]
-#    media_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].mean()
-#    std_valoracion = incidentes_alta_valoracion['satisfaccion_cliente'].std()
-#    print(f"Media valoración >=5: {media_valoracion:.2f} ± {std_valoracion:.2f}")
+
+
+    print("\n---------------- Min y Max del tiempo entre apertura y cierre de ticket ----------------")
+    dataframeTickets = pd.read_sql("SELECT id, fecha_apertura, fecha_cierre FROM tickets_emitidos", con)
+    # Convertir las columnas de fechas a datetime
+    dataframeTickets['fecha_apertura'] = pd.to_datetime(dataframeTickets['fecha_apertura'])
+    dataframeTickets['fecha_cierre'] = pd.to_datetime(dataframeTickets['fecha_cierre'])
+    # Calcular la diferencia en días
+    dataframeTickets['dias_diferencia'] = (dataframeTickets['fecha_cierre'] - dataframeTickets['fecha_apertura']).dt.days
+
+    print(f"Max: {max(dataframeTickets["dias_diferencia"])}\nMin: {min(dataframeTickets["dias_diferencia"])}")
+
+
+
+    print("\n---------------- Min y Max del número de incidentes atendidos por cada empleado ----------------")
+    dataframeIncidentes = pd.read_sql("SELECT id_emp, id_ticket FROM contactos_con_empleados", con)
+    dataframeIncidentes = dataframeIncidentes.groupby('id_emp').agg(
+        tickets_atendidos = ('id_emp', 'count')
+    )
+
+
+    id_emp_max = dataframeIncidentes['tickets_atendidos'].idxmax()
+    id_emp_min = dataframeIncidentes['tickets_atendidos'].idxmin()
+
+    print(f"Empleado: {id_emp_max} | Max: {max(dataframeIncidentes["tickets_atendidos"])}\nEmpleado: {id_emp_min} | Min: {min(dataframeIncidentes["tickets_atendidos"])}")
+
 
 con = crearBBDD()
 calcular_metricas(con)
