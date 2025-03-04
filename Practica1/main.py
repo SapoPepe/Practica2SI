@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 
@@ -210,4 +211,36 @@ incidentes_por_empleado = dataFrameConjunto.groupby("id_emp").agg(
 
 print(incidentes_por_empleado)
 
-print("hola")
+def generar_graficas(con):
+    # Gráfico de actuaciones por empleado
+    df = pd.read_sql("""
+        SELECT id_emp, COUNT(*) as total_actuaciones
+        FROM contactos_con_empleados
+        GROUP BY id_emp
+    """, con)
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(df['id_emp'].astype(str), df['total_actuaciones'])
+    plt.title('Número Total de Actuaciones por Empleado')
+    plt.xlabel('ID del Empleado')
+    plt.ylabel('Total de Actuaciones')
+    plt.show()
+
+    # Gráfico de actuaciones por día de la semana
+    df = pd.read_sql("SELECT fecha FROM contactos_con_empleados", con)
+    df['fecha'] = pd.to_datetime(df['fecha'])
+    df['dia_semana'] = df['fecha'].dt.day_name()
+    dias_orden = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    counts = df['dia_semana'].value_counts().reindex(dias_orden, fill_value=0)
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(counts.index, counts.values)
+    plt.title('Total de Actuaciones por Día de la Semana')
+    plt.xlabel('Día de la Semana')
+    plt.ylabel('Total de Actuaciones')
+    plt.xticks(rotation=45)
+    plt.show()
+
+con = crearBBDD()
+calcular_metricas(con)
+generar_graficas(con)
