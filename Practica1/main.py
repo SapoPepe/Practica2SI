@@ -2,7 +2,7 @@ import sqlite3
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 
 
 
@@ -212,6 +212,54 @@ incidentes_por_empleado = dataFrameConjunto.groupby("id_emp").agg(
 print(incidentes_por_empleado)
 
 def generar_graficas(con):
+    df = pd.read_sql("SELECT fecha_apertura, fecha_cierre, es_mantenimiento FROM tickets_emitidos", con)
+    df['fecha_apertura'] = pd.to_datetime(df['fecha_apertura'])
+    df['fecha_cierre'] = pd.to_datetime(df['fecha_cierre'])
+    df['tiempo_resolucion'] = (df['fecha_cierre'] - df['fecha_apertura']).dt.days
+
+    media_tiempos = df.groupby('es_mantenimiento')['tiempo_resolucion'].mean()
+
+    plt.figure(figsize=(6, 4))
+    media_tiempos.plot(kind='bar', color=['blue', 'orange'])
+    plt.xlabel('Tipo de Incidente')
+    plt.ylabel('Tiempo Medio de Resolución (días)')
+    plt.title('Tiempo Medio de Resolución por Tipo de Incidente')
+    plt.xticks(ticks=[0, 1], labels=['No Mantenimiento', 'Mantenimiento'], rotation=0)
+    plt.show()
+
+    df = pd.read_sql("SELECT fecha_apertura, fecha_cierre, tipo_incidencia FROM tickets_emitidos", con)
+    df['fecha_apertura'] = pd.to_datetime(df['fecha_apertura'])
+    df['fecha_cierre'] = pd.to_datetime(df['fecha_cierre'])
+    df['tiempo_resolucion'] = (df['fecha_cierre'] - df['fecha_apertura']).dt.days
+
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x=df['tipo_incidencia'].astype(str), y=df['tiempo_resolucion'], showfliers=False,
+                flierprops={'marker': 'o', 'markersize': 5},
+                boxprops={'facecolor': 'lightblue'},
+                whiskerprops={'linewidth': 2})
+
+    percentil_5 = df['tiempo_resolucion'].quantile(0.05)
+    percentil_90 = df['tiempo_resolucion'].quantile(0.90)
+
+    plt.axhline(y=percentil_5, color='red', linestyle='dashed', label='Percentil 5%')
+    plt.axhline(y=percentil_90, color='green', linestyle='dashed', label='Percentil 90%')
+
+    plt.xlabel('Tipo de Incidente')
+    plt.ylabel('Tiempo de Resolución (días)')
+    plt.title('Distribución del Tiempo de Resolución por Tipo de Incidente')
+    plt.legend()
+    plt.show()
+
+    df = pd.read_sql(
+        "SELECT cliente, COUNT(*) AS num_incidentes FROM tickets_emitidos WHERE es_mantenimiento = 1 AND tipo_incidencia != 1 GROUP BY cliente ORDER BY num_incidentes DESC LIMIT 5",
+        con)
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x='cliente', y='num_incidentes', hue='cliente', data=df, palette='Reds', legend=False)
+    plt.xlabel('ID Cliente')
+    plt.ylabel('Número de Incidentes')
+    plt.title('Top 5 Clientes Más Críticos')
+    plt.show()
+
     # Gráfico de actuaciones por empleado
     df = pd.read_sql("""
         SELECT id_emp, COUNT(*) as total_actuaciones
@@ -230,7 +278,7 @@ def generar_graficas(con):
     df = pd.read_sql("SELECT fecha FROM contactos_con_empleados", con)
     df['fecha'] = pd.to_datetime(df['fecha'])
     df['dia_semana'] = df['fecha'].dt.day_name()
-    dias_orden = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+    dias_orden = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     counts = df['dia_semana'].value_counts().reindex(dias_orden, fill_value=0)
 
     plt.figure(figsize=(10, 6))
