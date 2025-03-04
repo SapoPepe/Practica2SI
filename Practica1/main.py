@@ -168,7 +168,7 @@ def calcular_metricas(con):
     resultado = dataframeHorasEmp.groupby('id_emp').agg(
         total_horas = ('tiempo', 'sum')
     )
-    print(f"Max: {max(resultado["total_horas"])}\nMin: {min(resultado["total_horas"])}")
+    print(f"Max: {max(resultado['total_horas'])}\nMin: {min(resultado['total_horas'])}")
 
 
 
@@ -180,7 +180,7 @@ def calcular_metricas(con):
     # Calcular la diferencia en días
     dataframeTickets['dias_diferencia'] = (dataframeTickets['fecha_cierre'] - dataframeTickets['fecha_apertura']).dt.days
 
-    print(f"Max: {max(dataframeTickets["dias_diferencia"])}\nMin: {min(dataframeTickets["dias_diferencia"])}")
+    print(f"Max: {max(dataframeTickets['dias_diferencia'])}\nMin: {min(dataframeTickets['dias_diferencia'])}")
 
 
 
@@ -194,7 +194,7 @@ def calcular_metricas(con):
     id_emp_max = dataframeIncidentes['tickets_atendidos'].idxmax()
     id_emp_min = dataframeIncidentes['tickets_atendidos'].idxmin()
 
-    print(f"Empleado: {id_emp_max} | Max: {max(dataframeIncidentes["tickets_atendidos"])}\nEmpleado: {id_emp_min} | Min: {min(dataframeIncidentes["tickets_atendidos"])}")
+    print(f"Empleado: {id_emp_max} | Max: {max(dataframeIncidentes['tickets_atendidos'])}\nEmpleado: {id_emp_min} | Min: {min(dataframeIncidentes['tickets_atendidos'])}")
 
 
 con = crearBBDD()
@@ -241,6 +241,4 @@ def generar_graficas(con):
     plt.xticks(rotation=45)
     plt.show()
 
-con = crearBBDD()
-calcular_metricas(con)
 generar_graficas(con)
