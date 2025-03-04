@@ -2,6 +2,35 @@ import sqlite3
 import json
 import pandas as pd
 
+
+
+
+def calcularNumeroIncidentesFraude(dataFrameTicketsEmitidos):
+    contador = 0
+    for valor in dataFrameTicketsEmitidos.values:
+        if valor[6] == 5:
+            contador += 1
+
+    return contador
+
+def numeroContactosFraude(dataFrameTicketsEmitidos, dataFrameContactosEmpleado):
+    idesTickets = []
+    contador = 0
+
+    for valor in dataFrameTicketsEmitidos.values:
+        if valor[6] == 5:
+            idesTickets.append(valor[0])
+
+    for valor in dataFrameContactosEmpleado.values:
+        if valor[1] in idesTickets:
+            contador +=1
+
+    return contador
+
+
+
+
+
 def leerJSON(cur, con):
     ficheroJSON = open('datos.json', 'r')
     datos = json.load(ficheroJSON)
@@ -43,6 +72,12 @@ def leerJSON(cur, con):
 def crearBBDD():
     con = sqlite3.connect('database.db')
     cur = con.cursor()
+
+    cur.execute("DROP TABLE clientes;")
+    cur.execute("DROP TABLE empleados;")
+    cur.execute("DROP TABLE tipos_incidentes;")
+    cur.execute("DROP TABLE tickets_emitidos;")
+    cur.execute("DROP TABLE contactos_con_empleados;")
 
     cur.execute("CREATE TABLE IF NOT EXISTS clientes ("
                 "id_cli INTEGER PRIMARY KEY,"
@@ -164,3 +199,15 @@ def calcular_metricas(con):
 con = crearBBDD()
 calcular_metricas(con)
 
+
+
+dataFrameConjunto = pd.read_sql("SELECT t.id, i.*, c.id_cli, c.nombre AS nombre_cli, e.id_emp, e.nombre AS nombre_emp FROM tickets_emitidos t JOIN tipos_incidentes i ON t.tipo_incidencia = i.id_incidencia JOIN contactos_con_empleados ce ON t.id = ce.id_ticket JOIN clientes c ON t.cliente = c.id_cli JOIN empleados e ON ce.id_emp = e.id_emp WHERE i.nombre = 'Fraude'", con)
+
+# Contar el número de incidentes de tipo "Fraude" por empleado
+incidentes_por_empleado = dataFrameConjunto.groupby("id_emp").agg(
+    incidentes = ('id_emp', 'count')
+)
+
+print(incidentes_por_empleado)
+
+print("hola")
