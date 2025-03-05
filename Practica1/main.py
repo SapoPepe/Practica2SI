@@ -5,33 +5,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
-
-def calcularNumeroIncidentesFraude(dataFrameTicketsEmitidos):
-    contador = 0
-    for valor in dataFrameTicketsEmitidos.values:
-        if valor[6] == 5:
-            contador += 1
-
-    return contador
-
-def numeroContactosFraude(dataFrameTicketsEmitidos, dataFrameContactosEmpleado):
-    idesTickets = []
-    contador = 0
-
-    for valor in dataFrameTicketsEmitidos.values:
-        if valor[6] == 5:
-            idesTickets.append(valor[0])
-
-    for valor in dataFrameContactosEmpleado.values:
-        if valor[1] in idesTickets:
-            contador +=1
-
-    return contador
-
-
-
-
-
 def leerJSON(cur, con):
     ficheroJSON = open('datos.json', 'r')
     datos = json.load(ficheroJSON)
@@ -197,19 +170,81 @@ def calcular_metricas(con):
     print(f"Empleado: {id_emp_max} | Max: {max(dataframeIncidentes['tickets_atendidos'])}\nEmpleado: {id_emp_min} | Min: {min(dataframeIncidentes['tickets_atendidos'])}")
 
 
+
+def calcular_estadisticas(df, columna):
+    return df[columna].agg(['mean', 'median', 'var', 'max', 'min'])
+
+
+
 con = crearBBDD()
 calcular_metricas(con)
 
 
+dataFrameConjunto = pd.read_sql("SELECT t.id, t.fecha_apertura, t.fecha_cierre, i.*, c.id_cli, c.nombre AS nombre_cli, e.id_emp, e.nombre AS nombre_emp, e.nivel FROM tickets_emitidos t JOIN tipos_incidentes i ON t.tipo_incidencia = i.id_incidencia JOIN contactos_con_empleados ce ON t.id = ce.id_ticket JOIN clientes c ON t.cliente = c.id_cli JOIN empleados e ON ce.id_emp = e.id_emp", con)
+dataFrameConjuntoFraude = dataFrameConjunto[dataFrameConjunto["nombre"] == "Fraude"].copy()
+dataFrameConjuntoFraude["fecha_apertura"] = pd.to_datetime(dataFrameConjuntoFraude["fecha_apertura"])   # Transforma la fecha de apertura a formato datetime
+dataFrameConjuntoFraude["dia_apertura"] = dataFrameConjuntoFraude["fecha_apertura"].dt.dayofweek    # Se saca el día de apertura
 
-dataFrameConjunto = pd.read_sql("SELECT t.id, i.*, c.id_cli, c.nombre AS nombre_cli, e.id_emp, e.nombre AS nombre_emp FROM tickets_emitidos t JOIN tipos_incidentes i ON t.tipo_incidencia = i.id_incidencia JOIN contactos_con_empleados ce ON t.id = ce.id_ticket JOIN clientes c ON t.cliente = c.id_cli JOIN empleados e ON ce.id_emp = e.id_emp WHERE i.nombre = 'Fraude'", con)
+# ---------------- INCIDENTES ----------------
+# 1. Número de incidentes por empleado
+incidentes_por_empleado = dataFrameConjuntoFraude.groupby("id_emp").agg(numero_incidentes=('id', 'nunique')).reset_index()
+# 2. Número de incidentes por empleados con nivel entre 1 y 3
+incidentes_por_nivel = dataFrameConjuntoFraude[dataFrameConjuntoFraude["nivel"].between(1, 3)].groupby("id_emp").agg(numero_incidentes=('id_emp', 'count')).reset_index()
+# 3. Número de incidentes por cliente
+incidentes_por_cliente = dataFrameConjuntoFraude.groupby("id_cli").agg(numero_incidentes=('id', 'nunique')).reset_index()
+# 4. Número de incidentes por tipo de incidente
+incidentes_por_tipo = dataFrameConjunto.groupby("id_incidencia").agg(nombre_incidencia=('nombre', 'first'), numero_incidentes=('id', 'nunique')).reset_index()
+# 5. Número de incidentes por día de la semana
+incidentes_por_dia = dataFrameConjuntoFraude.groupby("dia_apertura").agg(numero_incidentes=('dia_apertura', 'count')).reset_index()
 
-# Contar el número de incidentes de tipo "Fraude" por empleado
-incidentes_por_empleado = dataFrameConjunto.groupby("id_emp").agg(
-    incidentes = ('id_emp', 'count')
-)
+
+
+estadisticas_empleado = calcular_estadisticas(incidentes_por_empleado, 'numero_incidentes')
+estadisticas_nivel = calcular_estadisticas(incidentes_por_nivel, 'numero_incidentes')
+estadisticas_tipo = calcular_estadisticas(incidentes_por_tipo, 'numero_incidentes')
+estadisticas_cliente = calcular_estadisticas(incidentes_por_cliente, 'numero_incidentes')
+estadisticas_dia = calcular_estadisticas(incidentes_por_dia, 'numero_incidentes')
 
 print(incidentes_por_empleado)
+print("Estadisticas por empleado:\n", estadisticas_empleado)
+print(incidentes_por_nivel)
+print("\nEstadisticas por empleado con nivel:\n", estadisticas_empleado)
+print(incidentes_por_tipo)
+print("\nEstadisticas por tipo de incidente:\n", estadisticas_tipo)
+print(incidentes_por_cliente)
+print("\nEstadisticas por cliente:\n", estadisticas_cliente)
+print(incidentes_por_dia)
+print("\nEstadisticas por dia:\n", estadisticas_dia)
+
+
+
+# ---------------- ACTUACIONES ----------------
+actuaciones_por_empleado = dataFrameConjuntoFraude.groupby("id_emp").agg(actuaciones=('id_emp', 'count')).reset_index()
+actuaciones_por_nivel = dataFrameConjuntoFraude[dataFrameConjuntoFraude["nivel"].between(1, 3)].groupby("id_emp").agg(actuaciones=('id_emp', 'count')).reset_index()
+actuaciones_por_tipo = dataFrameConjunto.groupby("id_incidencia").agg(nombre_incidencia=('nombre', 'first'), actuaciones=('id_emp', 'count')).reset_index()
+actuaciones_por_cliente = dataFrameConjuntoFraude.groupby("id_cli").agg(actuaciones=('id_emp', 'count')).reset_index()
+actuaciones_por_dia = dataFrameConjuntoFraude.groupby("dia_apertura").agg(actuaciones=('id_emp', 'count')).reset_index()
+
+estadisticas_empleado_act = calcular_estadisticas(actuaciones_por_empleado, 'actuaciones')
+estadisticas_nivel_act = calcular_estadisticas(actuaciones_por_nivel, 'actuaciones')
+estadisticas_tipo_act = calcular_estadisticas(actuaciones_por_tipo, 'actuaciones')
+estadisticas_cliente_act = calcular_estadisticas(actuaciones_por_cliente, 'actuaciones')
+estadisticas_dia_act = calcular_estadisticas(actuaciones_por_dia, 'actuaciones')
+
+print(actuaciones_por_empleado)
+print("Estadisticas por empleado:\n", estadisticas_empleado_act)
+print(actuaciones_por_nivel)
+print("\nEstadisticas por empleado con nivel:\n", estadisticas_empleado_act)
+print(actuaciones_por_tipo)
+print("\nEstadisticas por tipo de incidente:\n", estadisticas_tipo_act)
+print(actuaciones_por_cliente)
+print("\nEstadisticas por cliente:\n", estadisticas_cliente_act)
+print(actuaciones_por_dia)
+print("\nEstadisticas por dia:\n", estadisticas_dia_act)
+
+
+
+
 
 def generar_graficas(con):
     df = pd.read_sql("SELECT fecha_apertura, fecha_cierre, es_mantenimiento FROM tickets_emitidos", con)
