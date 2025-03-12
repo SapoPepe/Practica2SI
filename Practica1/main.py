@@ -37,12 +37,6 @@ def leerJSON(cur, con):
 
         con.commit()
 
-
-
-
-
-
-
 def crearBBDD():
     con = sqlite3.connect('database.db')
     cur = con.cursor()
@@ -133,7 +127,7 @@ def calcular_metricas(con):
         media=('tiempo', 'mean'),
         desviacion=('tiempo', 'std')
     ).reset_index()
-    print(resultado)
+    print(resultado.to_string())
 
 
     print("\n---------------- Min y Max del total de horas realizadas por los empleados ----------------")
