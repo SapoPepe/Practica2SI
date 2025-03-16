@@ -37,21 +37,16 @@ def leerJSON(cur, con):
 
         con.commit()
 
-
-
-
-
-
-
 def crearBBDD():
     con = sqlite3.connect('database.db')
     cur = con.cursor()
 
-    cur.execute("DROP TABLE clientes;")
-    cur.execute("DROP TABLE empleados;")
-    cur.execute("DROP TABLE tipos_incidentes;")
-    cur.execute("DROP TABLE tickets_emitidos;")
-    cur.execute("DROP TABLE contactos_con_empleados;")
+    cur.execute("DROP TABLE IF EXISTS clientes;")
+    cur.execute("DROP TABLE IF EXISTS empleados;")
+    cur.execute("DROP TABLE IF EXISTS tipos_incidentes;")
+    cur.execute("DROP TABLE IF EXISTS tickets_emitidos;")
+    cur.execute("DROP TABLE IF EXISTS contactos_con_empleados;")
+
 
     cur.execute("CREATE TABLE IF NOT EXISTS clientes ("
                 "id_cli INTEGER PRIMARY KEY,"
@@ -133,7 +128,7 @@ def calcular_metricas(con):
         media=('tiempo', 'mean'),
         desviacion=('tiempo', 'std')
     ).reset_index()
-    print(resultado)
+    print(resultado.to_string())
 
 
     print("\n---------------- Min y Max del total de horas realizadas por los empleados ----------------")
@@ -189,7 +184,7 @@ dataFrameConjuntoFraude["dia_apertura"] = dataFrameConjuntoFraude["fecha_apertur
 # 1. Número de incidentes por empleado
 incidentes_por_empleado = dataFrameConjuntoFraude.groupby("id_emp").agg(numero_incidentes=('id', 'nunique')).reset_index()
 # 2. Número de incidentes por empleados con nivel entre 1 y 3
-incidentes_por_nivel = dataFrameConjuntoFraude[dataFrameConjuntoFraude["nivel"].between(1, 3)].groupby("id_emp").agg(numero_incidentes=('id_emp', 'count')).reset_index()
+incidentes_por_nivel = dataFrameConjuntoFraude[dataFrameConjuntoFraude["nivel"].between(1, 3)].groupby("id_emp").agg(numero_incidentes=('id', 'nunique')).reset_index()
 # 3. Número de incidentes por cliente
 incidentes_por_cliente = dataFrameConjuntoFraude.groupby("id_cli").agg(numero_incidentes=('id', 'nunique')).reset_index()
 # 4. Número de incidentes por tipo de incidente
@@ -208,7 +203,7 @@ estadisticas_dia = calcular_estadisticas(incidentes_por_dia, 'numero_incidentes'
 print(incidentes_por_empleado)
 print("Estadisticas por empleado:\n", estadisticas_empleado)
 print(incidentes_por_nivel)
-print("\nEstadisticas por empleado con nivel:\n", estadisticas_empleado)
+print("\nEstadisticas por empleado con nivel:\n", estadisticas_nivel)
 print(incidentes_por_tipo)
 print("\nEstadisticas por tipo de incidente:\n", estadisticas_tipo)
 print(incidentes_por_cliente)
@@ -234,7 +229,7 @@ estadisticas_dia_act = calcular_estadisticas(actuaciones_por_dia, 'actuaciones')
 print(actuaciones_por_empleado)
 print("Estadisticas por empleado:\n", estadisticas_empleado_act)
 print(actuaciones_por_nivel)
-print("\nEstadisticas por empleado con nivel:\n", estadisticas_empleado_act)
+print("\nEstadisticas por empleado con nivel:\n", estadisticas_nivel_act)
 print(actuaciones_por_tipo)
 print("\nEstadisticas por tipo de incidente:\n", estadisticas_tipo_act)
 print(actuaciones_por_cliente)
@@ -295,20 +290,22 @@ def generar_graficas(con):
     plt.title('Top 5 Clientes Más Críticos')
     plt.show()
 
-    # Gráfico de actuaciones por empleado
+    # Gráfico de actuaciones por cliente
     df = pd.read_sql("""
-        SELECT id_emp, COUNT(*) as total_actuaciones
-        FROM contactos_con_empleados
-        GROUP BY id_emp
+        SELECT t.cliente AS id_cliente, 
+               COUNT(*) as total_actuaciones 
+        FROM contactos_con_empleados c
+        JOIN tickets_emitidos t ON c.id_ticket = t.id
+        GROUP BY t.cliente
     """, con)
 
     plt.figure(figsize=(10, 6))
-    plt.bar(df['id_emp'].astype(str), df['total_actuaciones'])
-    plt.title('Número Total de Actuaciones por Empleado')
-    plt.xlabel('ID del Empleado')
+    plt.bar(df['id_cliente'].astype(str), df['total_actuaciones'])
+    plt.title('Número Total de Actuaciones por Cliente')
+    plt.xlabel('ID del Cliente')
     plt.ylabel('Total de Actuaciones')
     plt.show()
-
+    
     # Gráfico de actuaciones por día de la semana
     df = pd.read_sql("SELECT fecha FROM contactos_con_empleados", con)
     df['fecha'] = pd.to_datetime(df['fecha'])
