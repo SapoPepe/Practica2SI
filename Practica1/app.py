@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from flask import Flask, render_template
 app = Flask(__name__)
 
@@ -42,11 +43,11 @@ def crearBBDD():
     con = sqlite3.connect('database.db')
     cur = con.cursor()
 
-    cur.execute("DROP TABLE clientes;")
-    cur.execute("DROP TABLE empleados;")
-    cur.execute("DROP TABLE tipos_incidentes;")
-    cur.execute("DROP TABLE tickets_emitidos;")
-    cur.execute("DROP TABLE contactos_con_empleados;")
+    cur.execute("DROP TABLE IF EXISTS clientes;")
+    cur.execute("DROP TABLE IF EXISTS empleados;")
+    cur.execute("DROP TABLE IF EXISTS tipos_incidentes;")
+    cur.execute("DROP TABLE IF EXISTS tickets_emitidos;")
+    cur.execute("DROP TABLE IF EXISTS contactos_con_empleados;")
 
     cur.execute("CREATE TABLE IF NOT EXISTS clientes ("
                 "id_cli INTEGER PRIMARY KEY,"
@@ -192,10 +193,83 @@ def calcularAgrupaciones(con):
 
     return incidentes_por_empleado.to_dict(orient='records'), estadisticas_empleado.to_dict(), incidentes_por_nivel.to_dict(orient='records'), incidentes_por_tipo.to_dict(orient='records'), estadisticas_tipo.to_dict(), incidentes_por_cliente.to_dict(orient='records'), estadisticas_cliente.to_dict(), incidentes_por_dia.to_dict(orient='records'), estadisticas_dia.to_dict(), actuaciones_por_empleado.to_dict(orient='records'), estadisticas_empleado_act.to_dict(), actuaciones_por_nivel.to_dict(orient='records'), estadisticas_empleado_act.to_dict(), actuaciones_por_tipo.to_dict(orient='records'), estadisticas_tipo_act.to_dict(), actuaciones_por_cliente.to_dict(orient='records'), estadisticas_cliente_act.to_dict(), actuaciones_por_dia.to_dict(orient='records'), estadisticas_dia_act.to_dict()
 
+def generar_graficas(con):
+    # Crear directorio para imágenes
+    os.makedirs('static/img', exist_ok=True)
+    paths = {}
+
+    # Gráfico 1: Tiempo medio de resolución
+    df = pd.read_sql("SELECT fecha_apertura, fecha_cierre, es_mantenimiento FROM tickets_emitidos", con)
+    df['tiempo_resolucion'] = (pd.to_datetime(df['fecha_cierre']) - pd.to_datetime(df['fecha_apertura'])).dt.days
+    media_tiempos = df.groupby('es_mantenimiento')['tiempo_resolucion'].mean()
+    
+    plt.figure(figsize=(6, 4))
+    media_tiempos.plot(kind='bar', color=['blue', 'orange'])
+    plt.title('Tiempo Medio de Resolución por Tipo')
+    plt.xticks([0, 1], ['No Mantenimiento', 'Mantenimiento'], rotation=0)
+    plt.savefig('static/img/grafica1.png')
+    plt.close()
+    paths['grafica1'] = 'img/grafica1.png'
+
+    # Gráfico 2: Distribución tiempos
+    df = pd.read_sql("SELECT fecha_apertura, fecha_cierre, tipo_incidencia FROM tickets_emitidos", con)
+    df['tiempo_resolucion'] = (pd.to_datetime(df['fecha_cierre']) - pd.to_datetime(df['fecha_apertura'])).dt.days
+    
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x=df['tipo_incidencia'].astype(str), y=df['tiempo_resolucion'], showfliers=False)
+    plt.title('Distribución del Tiempo de Resolución')
+    plt.savefig('static/img/grafica2.png')
+    plt.close()
+    paths['grafica2'] = 'img/grafica2.png'
+
+    # Gráfico 3: Clientes más críticos
+    df = pd.read_sql(
+        "SELECT cliente, COUNT(*) AS num_incidentes FROM tickets_emitidos WHERE es_mantenimiento = 1 AND tipo_incidencia != 1 GROUP BY cliente ORDER BY num_incidentes DESC LIMIT 5",
+        con)
+    plt.figure(figsize=(8, 6))
+    sns.barplot(x='cliente', y='num_incidentes', data=df, palette='Reds')
+    plt.title('Top 5 Clientes Más Críticos')
+    plt.savefig('static/img/grafica3.png')
+    plt.close()
+    paths['grafica3'] = 'img/grafica3.png'
+
+    # Gráfico 4: Actuaciones por cliente
+    df = pd.read_sql("""
+        SELECT t.cliente AS id_cliente, 
+               COUNT(*) as total_actuaciones 
+        FROM contactos_con_empleados c
+        JOIN tickets_emitidos t ON c.id_ticket = t.id
+        GROUP BY t.cliente
+    """, con)
+    plt.figure(figsize=(10, 6))
+    plt.bar(df['id_cliente'].astype(str), df['total_actuaciones'])
+    plt.title('Actuaciones por Cliente')
+    plt.savefig('static/img/grafica4.png')
+    plt.close()
+    paths['grafica4'] = 'img/grafica4.png'
+
+    # Gráfico 5: Actuaciones por día
+    df = pd.read_sql("SELECT fecha FROM contactos_con_empleados", con)
+    df['fecha'] = pd.to_datetime(df['fecha'])
+    df['dia_semana'] = df['fecha'].dt.day_name()
+    dias_orden = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    counts = df['dia_semana'].value_counts().reindex(dias_orden, fill_value=0)
+
+    plt.figure(figsize=(10, 6))
+    plt.bar(counts.index, counts.values)
+    plt.title('Actuaciones por Día de la Semana')
+    plt.xticks(rotation=45)
+    plt.savefig('static/img/grafica5.png')
+    plt.close()
+    paths['grafica5'] = 'img/grafica5.png'
+
+    return paths
+
 @app.route('/')
 def home():
     con = crearBBDD()
     cur = con.cursor()
+    img_paths = generar_graficas(con)
     dataFrameClientes = pd.DataFrame(cur.execute("SELECT * FROM clientes"))
     dataFrameEmpleados = pd.DataFrame(cur.execute("SELECT * FROM empleados"))
     dataFrameTicketsEmitidos = pd.DataFrame(cur.execute("SELECT * FROM tickets_emitidos"))
@@ -211,6 +285,7 @@ def home():
      estadisticas_cliente_act, actuaciones_por_dia, estadisticas_dia_act) = calcularAgrupaciones(con)
 
     return render_template("index.html",
+                           img_paths=img_paths,
                            nclientes=len(dataFrameClientes), nempleados=len(dataFrameEmpleados),
                            ntickets=str(len(dataFrameTicketsEmitidos)), ntipos=str(len(dataFrameTiposIncidentes)), media = media,
                            desviacion_estandar = desviacion_estandar, media_incidentes=  media_incidentes, desviacion_estandar_incidentes= desviacion_estandar_incidentes,

@@ -34,9 +34,72 @@
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+        .graficas-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .grafica {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .grafica:hover {
+            transform: translateY(-5px);
+        }
+        
+        .grafica img {
+            width: 100%;
+            height: 300px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        
+        .grafica h3 {
+            margin: 15px 0;
+            color: #2c3e50;
+            font-size: 1.4em;
+        }
     </style>
 </head>
 <body>
+    <section class="graficas-principal">
+        <h1>Análisis Visual de Incidentes</h1>
+        <div class="graficas-container">
+            <div class="grafica">
+                <h3>Tiempo Medio de Resolución</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica1) }}" alt="Tiempo Resolución">
+            </div>
+            
+            <div class="grafica">
+                <h3>Distribución de Tiempos</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica2) }}" alt="Distribución Tiempos">
+            </div>
+            
+            <div class="grafica">
+                <h3>Clientes Más Críticos</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica3) }}" alt="Clientes Críticos">
+            </div>
+            
+            <div class="grafica">
+                <h3>Actuaciones por Cliente</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica4) }}" alt="Actuaciones Clientes">
+            </div>
+            
+            <div class="grafica">
+                <h3>Actuaciones por Día</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica5) }}" alt="Actuaciones Días">
+            </div>
+        </div>
+    </section>
     <h1>Número de muestras totales</h1>
     <p><strong>Número de clientes:</strong> {{ nclientes }}</p>
     <p><strong>Número de Empleados:</strong> {{ nempleados }}</p>
