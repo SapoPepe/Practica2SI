@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos del Usuario</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 50%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .graficas-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .grafica {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .grafica:hover {
+            transform: translateY(-5px);
+        }
+        
+        .grafica img {
+            width: 100%;
+            height: 300px;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+        
+        .grafica h3 {
+            margin: 15px 0;
+            color: #2c3e50;
+            font-size: 1.4em;
+        }
+    </style>
+</head>
+<body>
+    <section class="graficas-principal">
+        <h1>Análisis Visual de Incidentes</h1>
+        <div class="graficas-container">
+            <div class="grafica">
+                <h3>Tiempo Medio de Resolución</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica1) }}" alt="Tiempo Resolución">
+            </div>
+            
+            <div class="grafica">
+                <h3>Distribución de Tiempos</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica2) }}" alt="Distribución Tiempos">
+            </div>
+            
+            <div class="grafica">
+                <h3>Clientes Más Críticos</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica3) }}" alt="Clientes Críticos">
+            </div>
+            
+            <div class="grafica">
+                <h3>Actuaciones por Cliente</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica4) }}" alt="Actuaciones Clientes">
+            </div>
+            
+            <div class="grafica">
+                <h3>Actuaciones por Día</h3>
+                <img src="{{ url_for('static', filename=img_paths.grafica5) }}" alt="Actuaciones Días">
+            </div>
+        </div>
+    </section>
+    <h1>Número de muestras totales</h1>
+    <p><strong>Número de clientes:</strong> {{ nclientes }}</p>
+    <p><strong>Número de Empleados:</strong> {{ nempleados }}</p>
+    <p><strong>Número de Tickets Emitidos:</strong> {{ ntickets }}</p>
+    <p><strong>Número de Tipos de Incidentes:</strong> {{ ntipos }}</p>
+    <h1>Media y desviación estándar del total de incidentes en los que ha habido una valoración mayor o igual a 5</h1>
+    <p><strong>Media:</strong> {{ media }}</p>
+    <p><strong>Desviación Estándar:</strong> {{ desviacion_estandar }}</p>
+    <h1>Media y desviación estándar del total del número de incidentes por cliente.</h1>
+    <p><strong>Media:</strong> {{ media_incidentes }}</p>
+    <p><strong>Desviación Estándar:</strong> {{ desviacion_estandar_incidentes }}</p>
+    <h1>Media y desviación estándar del número de horas totales realizadas en cada incidente.</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID Incidente</th>
+                <th>Media</th>
+                <th>Desviación Típica</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in horasxIncidente %}
+            <tr>
+                <td>{{ fila.id }}</td>
+                <td>{{ fila.media }}</td>
+                <td>{{ fila.desviacion }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h1>Valor mínimo y valor máximo del total de horas realizadas por los empleados.</h1>
+    <p><strong>Mínimo:</strong> {{ minHorasEmpleado }}</p>
+    <p><strong>Máximo:</strong> {{ maxHorasEmpleado }}</p>
+    <h1>Valor mínimo y valor máximo del tiempo entre apertura y cierre de incidente.</h1>
+    <p><strong>Mínimo:</strong> {{ minDiasIncidente }}</p>
+    <p><strong>Máximo:</strong> {{ maxDiasIncidente }}</p>
+    <h1>Valor mínimo y valor máximo del número de incidentes atendidos por cada empleado.</h1>
+    <p><strong>Mínimo: </strong>Corresponde al empleado con id {{ id_emp_min }}: {{ minAtendidos }}</p>
+    <p><strong>Máximo: </strong>Corresponde al empleado con id {{ id_emp_max }}: {{ maxAtendidos }}</p>
+    <h1>Número de incidentes por empleado</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID Empleado</th>
+                <th>Número de Incidentes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in incidentes_por_empleado %}
+            <tr>
+                <td>{{ fila.id_emp }}</td>
+                <td>{{ fila.numero_incidentes }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h1>Estadisticas por empleado</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_empleado.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de incidentes por nivel</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID Empleado</th>
+                <th>Número de Incidentes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in incidentes_por_nivel %}
+            <tr>
+                <td>{{ fila.id_emp }}</td>
+                <td>{{ fila.numero_incidentes }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <h1>Estadisticas por empleado con nivel</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_empleado.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de incidentes por tipo</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Incidencia</th>
+                    <th>Nombre de Incidencia</th>
+                    <th>Número de Incidentes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in incidentes_por_tipo %}
+                <tr>
+                    <td>{{ fila.id_incidencia }}</td>
+                    <td>{{ fila.nombre_incidencia }}</td>
+                    <td>{{ fila.numero_incidentes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por tipo de incidente</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_tipo.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de incidentes por tipo</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Cliente</th>
+                    <th>Número de Incidentes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in incidentes_por_cliente %}
+                <tr>
+                    <td>{{ fila.id_cli }}</td>
+                    <td>{{ fila.numero_incidentes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por cliente</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_cliente.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de incidentes por día</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Día de apertura</th>
+                    <th>Número de Incidentes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in incidentes_por_dia %}
+                <tr>
+                    <td>{{ fila.dia_apertura }}</td>
+                    <td>{{ fila.numero_incidentes }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por día</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_dia.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de actuaciones por empleado</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Empleado</th>
+                    <th>Número de Actuaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in actuaciones_por_empleado %}
+                <tr>
+                    <td>{{ fila.id_emp }}</td>
+                    <td>{{ fila.actuaciones }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por Empleado</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_empleado_act.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de actuaciones por nivel</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Empleado</th>
+                    <th>Número de Actuaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in actuaciones_por_nivel %}
+                <tr>
+                    <td>{{ fila.id_emp }}</td>
+                    <td>{{ fila.actuaciones }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por Empleado con nivel</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_empleado_act.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de actuaciones por tipo</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Incidencia</th>
+                    <th>Nombre de Incidencia</th>
+                    <th>Número de Actuaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in actuaciones_por_tipo %}
+                <tr>
+                    <td>{{ fila.id_incidencia }}</td>
+                    <td>{{ fila.nombre_incidencia }}</td>
+                    <td>{{ fila.actuaciones }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por tipo de incidente</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_tipo_act.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de actuaciones por cliente</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID Cliente</th>
+                    <th>Número de Actuaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in actuaciones_por_cliente %}
+                <tr>
+                    <td>{{ fila.id_cli }}</td>
+                    <td>{{ fila.actuaciones }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por cliente</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_cliente_act.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Número de actuaciones por dia</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Día de apertura</th>
+                    <th>Número de Actuaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fila in actuaciones_por_dia %}
+                <tr>
+                    <td>{{ fila.dia_apertura }}</td>
+                    <td>{{ fila.actuaciones }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    <h1>Estadisticas por día</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, value in estadisticas_dia_act.items() %}
+                <tr>
+                    <td>{{ key.capitalize() }}</td>
+                    <td>{{ value | round(2) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+</body>
+</html>
