@@ -4,8 +4,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
+
 app = Flask(__name__)
+
+with open('data_clasified.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+tickets = data['tickets_emitidos']
 
 def leerJSON(cur, con):
     ficheroJSON = open('datos.json', 'r')
@@ -96,10 +101,38 @@ def crearBBDD():
     leerJSON(cur, con)
     return con
 
+def top_clientes_incidencias(x):
+    clientes = {}
+    for ticket in tickets:
+        cliente = ticket['cliente']
+        clientes[cliente] = clientes.get(cliente, 0) + 1
+    sorted_clientes = sorted(clientes.items(), key=lambda item: (-item[1], item[0]))
+    return sorted_clientes[:x]
+
+def top_tipos_tiempo_resolucion(x):
+    tipos = {}
+    for ticket in tickets:
+        tipo = ticket['tipo_incidencia']
+        tiempo_total = sum(contacto['tiempo'] for contacto in ticket['contactos_con_empleados'])
+        tipos[tipo] = tipos.get(tipo, 0) + tiempo_total
+    sorted_tipos = sorted(tipos.items(), key=lambda item: (-item[1], item[0]))
+    return sorted_tipos[:x]
+
 @app.route('/')
 def home():
 
     return render_template("index.html")
+
+@app.route('/top_clientes/<int:x>')
+def get_top_clientes(x):
+    top = top_clientes_incidencias(x)
+    return jsonify([{'cliente': cliente, 'incidencias': count} for cliente, count in top])
+
+@app.route('/top_tipos/<int:x>')
+def get_top_tipos(x):
+    top = top_tipos_tiempo_resolucion(x)
+    return jsonify([{'tipo_incidencia': tipo, 'tiempo_total': tiempo} for tipo, tiempo in top])
+
 
 if __name__ == '__main__':
     app.run(debug=False)
