@@ -118,8 +118,23 @@ def top_tipos_tiempo_resolucion(x):
     sorted_tipos = sorted(tipos.items(), key=lambda item: (-item[1], item[0]))
     return sorted_tipos[:x]
 
+
+
 @app.route('/')
 def home():
+    con = crearBBDD()
+
+    dataFrameClientesTop = pd.read_sql("SELECT * FROM clientes c JOIN tickets_emitidos t ON c.id_cli = t.cliente;", con)
+    dataFrameC = dataFrameClientesTop.groupby('id_cli').agg(
+        numeroIncidencias = ('id_cli', 'count'),
+        nombre = ('nombre', 'first')
+    )
+
+    dataFrameC = dataFrameC.sort_values(by='numeroIncidencias', ascending=False)
+
+
+
+
 
     return render_template("index.html")
 
