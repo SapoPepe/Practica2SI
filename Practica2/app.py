@@ -118,36 +118,40 @@ def top_tipos_tiempo_resolucion(x):
     sorted_tipos = sorted(tipos.items(), key=lambda item: (-item[1], item[0]))
     return sorted_tipos[:x]
 
-
-
 @app.route('/')
 def home():
-    con = crearBBDD()
-
-    dataFrameClientesTop = pd.read_sql("SELECT * FROM clientes c JOIN tickets_emitidos t ON c.id_cli = t.cliente;", con)
-    dataFrameC = dataFrameClientesTop.groupby('id_cli').agg(
-        numeroIncidencias = ('id_cli', 'count'),
-        nombre = ('nombre', 'first')
-    )
-
-    dataFrameC = dataFrameC.sort_values(by='numeroIncidencias', ascending=False)
-
-
-
-
 
     return render_template("index.html")
 
 @app.route('/top_clientes/<int:x>')
 def get_top_clientes(x):
-    top = top_clientes_incidencias(x)
-    return jsonify([{'cliente': cliente, 'incidencias': count} for cliente, count in top])
+    con = crearBBDD()
+    dataframe = pd.read_sql("SELECT * FROM tickets_emitidos t JOIN clientes cli ON t.cliente=cli.id_cli", con)
+    cliMaxInci = dataframe.groupby('id_cli').agg(
+        nombre_cliente=('nombre', 'first'),
+        incidencias=('id_cli', 'count')
+    )
+
+    #Ordenar y escoger los X clientes requeridos
+    cliMaxIncidents_ordenado = cliMaxInci.sort_values(by='incidencias', ascending=False)[:x]
+
+    tabla_html = cliMaxIncidents_ordenado.to_html(classes='data')
+    return render_template('top_clientes.html', tabla_html=tabla_html)
+
 
 @app.route('/top_tipos/<int:x>')
 def get_top_tipos(x):
-    top = top_tipos_tiempo_resolucion(x)
-    return jsonify([{'tipo_incidencia': tipo, 'tiempo_total': tiempo} for tipo, tiempo in top])
+    con = crearBBDD()
+    dataframe = pd.read_sql("SELECT * FROM tickets_emitidos t JOIN contactos_con_empleados c ON c.id_ticket=t.id JOIN tipos_incidentes i ON t.tipo_incidencia=i.id_incidencia", con)
+    tiempoMaxInci = dataframe.groupby('id_incidencia').agg(
+        nombre_incidencia=('nombre', 'first'),
+        tiempo=('tiempo', 'sum')
+    )
 
+    tiempoMaxInci_ordenado = tiempoMaxInci.sort_values(by='tiempo', ascending=False)[:x]
+
+    tabla_html = tiempoMaxInci_ordenado.to_html(classes='data')
+    return render_template('top_clientes.html', tabla_html=tabla_html)
 
 if __name__ == '__main__':
     app.run(debug=False)
