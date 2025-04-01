@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import pandas as pd
+import requests
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
@@ -154,6 +155,16 @@ def get_top_tipos(x):
 
     tabla_html = tiempoMaxInci_ordenado.to_html(classes='data')
     return render_template('top_clientes.html', tabla_html=tabla_html)
+
+@app.route('/last10_vulns')
+def get_last_vulns():
+    req = requests.get("https://cve.circl.lu/api/last")
+    data = json.loads(req.text)
+    for doc in data:
+        try:
+            print(doc['cveMetadata']['cveId'], doc['containers']['cna']['descriptions'][0]['value'], doc['cveMetadata']['cveId']['dateUpdated'])
+        except:
+            pass
 
 if __name__ == '__main__':
     app.run(debug=False)
