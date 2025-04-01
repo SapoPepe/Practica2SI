@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Top clientes</title>
 </head>
 <body>
-    <h1>Top Clientes por Incidencias</h1>
-    {{ tabla_html|safe }}
+    <a href="/">Página</a>
+    
+    <!-- Sección Clientes -->
+    <div>
+        <h2>Top Clientes por Incidencias</h2>
+        {{ tabla_clientes_html|safe }}
+    </div>
+
+    <!-- Sección Empleados (condicional) -->
+    {% if es_empleados %}
+    <div>
+        <h2>🌹🔻✊ Top Empleados por Tiempo Invertido</h2>
+        {{ tabla_empleados_html|safe }}
+    </div>
+    {% endif %}
 </body>
 </html>

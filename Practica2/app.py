@@ -5,7 +5,7 @@ import requests
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 
 app = Flask(__name__)
 
@@ -126,20 +126,42 @@ def home():
 
 @app.route('/top_clientes/<int:x>')
 def get_top_clientes(x):
+    mostrar_empleados = request.args.get('empleados', default=False, type=bool)
     con = crearBBDD()
-    dataframe = pd.read_sql("SELECT * FROM tickets_emitidos t JOIN clientes cli ON t.cliente=cli.id_cli", con)
-    cliMaxInci = dataframe.groupby('id_cli').agg(
-        nombre_cliente=('nombre', 'first'),
-        incidencias=('id_cli', 'count')
-    )
-
-    #Ordenar y escoger los X clientes requeridos
-    cliMaxIncidents_ordenado = cliMaxInci.sort_values(by='incidencias', ascending=False)[:x]
-
-    tabla_html = cliMaxIncidents_ordenado.to_html(classes='data')
-    return render_template('top_clientes.html', tabla_html=tabla_html)
-
-    #Falta meterlo al index
+    
+    # Consulta base para clientes
+    query_clientes = """
+        SELECT cli.nombre AS Cliente, COUNT(*) AS Incidencias
+        FROM tickets_emitidos t
+        JOIN clientes cli ON t.cliente = cli.id_cli
+        GROUP BY cli.id_cli
+        ORDER BY Incidencias DESC
+        LIMIT ?
+    """
+    df_clientes = pd.read_sql(query_clientes, con, params=(x,))
+    tabla_clientes_html = df_clientes.to_html(classes='table table-striped', index=False)
+    
+    # Consulta adicional para empleados si es necesario
+    tabla_empleados_html = None
+    if mostrar_empleados:
+        query_empleados = """
+            SELECT e.nombre AS Empleado, 
+                   ROUND(SUM(c.tiempo), 2) AS "Horas invertidas"
+            FROM contactos_con_empleados c
+            JOIN empleados e ON c.id_emp = e.id_emp
+            GROUP BY e.id_emp
+            ORDER BY "Horas invertidas" DESC
+            LIMIT ?
+        """
+        df_empleados = pd.read_sql(query_empleados, con, params=(x,))
+        tabla_empleados_html = df_empleados.to_html(classes='table table-striped', index=False)
+    
+    con.close()
+    
+    return render_template('top_clientes.html',
+                          tabla_clientes_html=tabla_clientes_html,
+                          tabla_empleados_html=tabla_empleados_html,
+                          es_empleados=mostrar_empleados)
 
 
 @app.route('/top_tipos/<int:x>')
