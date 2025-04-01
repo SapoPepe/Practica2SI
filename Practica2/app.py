@@ -138,6 +138,8 @@ def get_top_clientes(x):
     tabla_html = cliMaxIncidents_ordenado.to_html(classes='data')
     return render_template('top_clientes.html', tabla_html=tabla_html)
 
+    #Falta meterlo al index
+
 
 @app.route('/top_tipos/<int:x>')
 def get_top_tipos(x):
