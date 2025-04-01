@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Últimas Noticias de Ciberseguridad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        nav {
+            background-color: #4CAF50;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        .news-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            justify-items: center;
+        }
+        .news-article {
+            background: white;
+            padding: 20px;
+            margin: 10px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        .news-article h2 {
+            color: #4CAF50;
+        }
+        .news-article p {
+            color: #555;
+        }
+        .news-article a {
+            color: #1E90FF;
+            text-decoration: none;
+        }
+        .load-more {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 20px;
+        }
+        .no-more-news {
+            color: #aaa;
+            text-align: center;
+            margin: 20px;
+        }
+        .scroll-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .scroll-to-top svg {
+            fill: white;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+    <script>
+        let articles = {{ articles|tojson }};
+        let currentIndex = 10;
+
+        function loadMore() {
+            const container = document.querySelector('.news-container');
+            for (let i = currentIndex; i < currentIndex + 10 && i < articles.length; i++) {
+                const article = articles[i];
+                const articleDiv = document.createElement('div');
+                articleDiv.className = 'news-article';
+                articleDiv.innerHTML = `
+                    <h2>${article.title}</h2>
+                    <p>${article.description}</p>
+                    <p><a href="${article.url}" target="_blank">Leer más</a></p>
+                    <p><small>Publicado el: ${article.publishedAt}</small></p>
+                `;
+                container.appendChild(articleDiv);
+            }
+            currentIndex += 10;
+            if (currentIndex >= articles.length) {
+                document.querySelector('.load-more').style.display = 'none';
+                const noMoreNews = document.createElement('div');
+                noMoreNews.className = 'no-more-news';
+                noMoreNews.textContent = 'Ya no hay más noticias';
+                container.appendChild(noMoreNews);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMore();
+        });
+
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</head>
+<body>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/top_tipos/1">Top Tipos</a>
+        <a href="/top_clientes/1">Top Clientes</a>
+        <a href="/last10_vulns">Top 10 Últimas Vulnerabilidades</a>
+        <a href="/news">Últimas Noticias de Ciberseguridad</a>
+    </nav>
+    <h1>Últimas Noticias de Ciberseguridad</h1>
+    <div class="news-container">
+        <!-- Initial articles will be loaded by JavaScript -->
+    </div>
+    <button class="load-more" onclick="loadMore()">Cargar más</button>
+    <button class="scroll-to-top" onclick="scrollToTop()">
+        <svg viewBox="0 0 24 24">
+            <path d="M12 2L3 13h6v7h6v-7h6z"/>
+        </svg>
+    </button>
+</body>
+</html>

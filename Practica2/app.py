@@ -177,5 +177,24 @@ def get_last_vulns():
     return render_template('last10_vulns.html', cves_ids=ids, cves_descriptions=descriptions, cves_dates=dates)
 
 
+@app.route('/news')
+def get_latest_cybersecurity_news():
+    api_key = '3dc2316e4020483398ca6152bd8a7aa4'
+    url = f'https://newsapi.org/v2/everything?q=cybersecurity&sortBy=publishedAt&apiKey={api_key}'
+    response = requests.get(url)
+    news_data = response.json()
+
+    articles = []
+    if news_data['status'] == 'ok':
+        for article in news_data['articles']:
+            articles.append({
+                'title': article['title'],
+                'description': article['description'],
+                'url': article['url'],
+                'publishedAt': article['publishedAt']
+            })
+
+    return render_template('latest_news.html', articles=articles)
+
 if __name__ == '__main__':
     app.run(debug=False)
