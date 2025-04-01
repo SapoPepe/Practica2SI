@@ -13,13 +13,22 @@
         h1 {
             text-align: center;
             color: #333;
+            margin-top: 80px; /* Add margin to avoid overlap with fixed nav */
         }
         nav {
             background-color: #4CAF50;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 10px;
             display: flex;
             justify-content: center;
+            position: fixed;
+            top: 10px;
+            width: 90%; /* Ajusta el ancho para que no sea 100% */
+            max-width: 1200px; /* Ancho máximo para el nav */
+            box-sizing: border-box;
+            z-index: 1000;
+            left: 50%; /* Centrar el nav */
+            transform: translateX(-50%); /* Centrar el nav */
         }
         nav a {
             color: white;
@@ -124,6 +133,7 @@
     </script>
 </head>
 <body>
+
     <nav>
         <a href="/">Inicio</a>
         <a href="/top_tipos/1">Top Tipos</a>
@@ -131,6 +141,7 @@
         <a href="/last10_vulns">Top 10 Últimas Vulnerabilidades</a>
         <a href="/news">Últimas Noticias de Ciberseguridad</a>
     </nav>
+
     <h1>Últimas Noticias de Ciberseguridad</h1>
     <div class="news-container">
         <!-- Initial articles will be loaded by JavaScript -->
