@@ -5,8 +5,8 @@ import requests
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
-from flask import Flask, render_template, jsonify, request
-
+from flask import Flask, render_template, jsonify, send_file
+from fpdf import FPDF
 app = Flask(__name__)
 
 with open('data_clasified.json', 'r', encoding='utf-8') as f:
@@ -124,50 +124,56 @@ def home():
 
     return render_template("index.html")
 
+def calculateTopClientes(x):
+    con = crearBBDD()
+    dataframe = pd.read_sql("SELECT * FROM tickets_emitidos t JOIN clientes cli ON t.cliente=cli.id_cli", con)
+    cliMaxInci = dataframe.groupby('id_cli').agg(
+        nombre_cliente=('nombre', 'first'),
+        incidencias=('id_cli', 'count')
+    )
+
+    # Ordenar y escoger los X clientes requeridos
+    cliMaxIncidents_ordenado = cliMaxInci.sort_values(by='incidencias', ascending=False)[:x]
+
+    return cliMaxIncidents_ordenado
 @app.route('/top_clientes/<int:x>')
 def get_top_clientes(x):
-    mostrar_empleados = request.args.get('empleados', default=False, type=bool)
-    con = crearBBDD()
-    
-    # Consulta base para clientes
-    query_clientes = """
-        SELECT cli.nombre AS Cliente, COUNT(*) AS Incidencias
-        FROM tickets_emitidos t
-        JOIN clientes cli ON t.cliente = cli.id_cli
-        GROUP BY cli.id_cli
-        ORDER BY Incidencias DESC
-        LIMIT ?
-    """
-    df_clientes = pd.read_sql(query_clientes, con, params=(x,))
-    tabla_clientes_html = df_clientes.to_html(classes='table table-striped', index=False)
-    
-    # Consulta adicional para empleados si es necesario
-    tabla_empleados_html = None
-    if mostrar_empleados:
-        query_empleados = """
-            SELECT e.nombre AS Empleado, 
-                   ROUND(SUM(c.tiempo), 2) AS "Horas invertidas"
-            FROM contactos_con_empleados c
-            JOIN empleados e ON c.id_emp = e.id_emp
-            GROUP BY e.id_emp
-            ORDER BY "Horas invertidas" DESC
-            LIMIT ?
-        """
-        df_empleados = pd.read_sql(query_empleados, con, params=(x,))
-        tabla_empleados_html = df_empleados.to_html(classes='table table-striped', index=False)
-    
-    con.close()
-    
-    return render_template('top_clientes.html',
-                          tabla_clientes_html=tabla_clientes_html,
-                          tabla_empleados_html=tabla_empleados_html,
-                          es_empleados=mostrar_empleados)
+    #Ordenar y escoger los X clientes requeridos
+    cliMaxIncidents_ordenado = calculateTopClientes(x)
 
+    tabla_html = cliMaxIncidents_ordenado.to_html(classes='data')
+    return render_template('top_clientes.html', tabla_html=tabla_html)
 
-@app.route('/top_tipos/<int:x>')
-def get_top_tipos(x):
+@app.route('/top_clientes/<int:x>/downloadPDF')
+def generateTopClientesPDF(x):
+    cliMaxIncidents_ordenado = calculateTopClientes(x)
+
+    pdf = generatePDF()
+
+    pdf.cell(200, 10, txt=f'Informe Top {x} Clientes con Incidencias', ln=True, align='C')
+    pdf.ln(10)
+
+    pdf.set_fill_color(200, 200, 200)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(100, 10, "Nombre Cliente", border=1, align='C', fill=True)
+    pdf.cell(50, 10, "Incidencias", border=1, align='C', fill=True)
+    pdf.ln()
+
+    for index, row in cliMaxIncidents_ordenado.iterrows():
+        pdf.cell(100, 10, row['nombre_incidencia'], border=1, align='C')
+        pdf.cell(50, 10, str(row['tiempo']), border=1, align='C')
+        pdf.ln()
+
+    pdf.output(f'Informes/Informe_Top_{x}_Clientes.pdf')
+    pdf_filename = f'Informes/Informe_Top_{x}_Clientes.pdf'
+
+    return send_file(pdf_filename, as_attachment=True)
+
+def calculateTopTipos(x):
     con = crearBBDD()
-    dataframe = pd.read_sql("SELECT * FROM tickets_emitidos t JOIN contactos_con_empleados c ON c.id_ticket=t.id JOIN tipos_incidentes i ON t.tipo_incidencia=i.id_incidencia", con)
+    dataframe = pd.read_sql(
+        "SELECT * FROM tickets_emitidos t JOIN contactos_con_empleados c ON c.id_ticket=t.id JOIN tipos_incidentes i ON t.tipo_incidencia=i.id_incidencia",
+        con)
     tiempoMaxInci = dataframe.groupby('id_incidencia').agg(
         nombre_incidencia=('nombre', 'first'),
         tiempo=('tiempo', 'sum')
@@ -175,11 +181,15 @@ def get_top_tipos(x):
 
     tiempoMaxInci_ordenado = tiempoMaxInci.sort_values(by='tiempo', ascending=False)[:x]
 
+    return tiempoMaxInci_ordenado
+
+@app.route('/top_tipos/<int:x>')
+def get_top_tipos(x):
+    tiempoMaxInci_ordenado = calculateTopTipos(x)
     tabla_html = tiempoMaxInci_ordenado.to_html(classes='data')
     return render_template('top_clientes.html', tabla_html=tabla_html)
 
-@app.route('/last10_vulns')
-def get_last_vulns():
+def obtainLastVulns():
     req = requests.get("https://cve.circl.lu/api/last")
     data = json.loads(req.text)
     ids = []
@@ -196,9 +206,38 @@ def get_last_vulns():
         except:
             pass
 
+    return ids, descriptions, dates
+@app.route('/last10_vulns')
+def get_last_vulns():
+    ids, descriptions, dates = obtainLastVulns()
+
     return render_template('last10_vulns.html', cves_ids=ids, cves_descriptions=descriptions, cves_dates=dates)
 
+@app.route('/last10_vulns/downloadPDF')
+def generateVulnPDF():
+    ids, descriptions, dates = obtainLastVulns()
 
+    pdf = generatePDF()
+
+    pdf.cell(200, 10, txt=f'Informe Top 10 Últimas Vulnerabilidades', ln=True, align='C')
+    pdf.ln(10)
+
+    pdf.set_fill_color(200, 200, 200)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(100, 10, "Nombre Cliente", border=1, align='C', fill=True)
+    pdf.cell(50, 10, "Incidencias", border=1, align='C', fill=True)
+    pdf.ln()
+
+    for element in range(len(ids)):
+        pdf.cell(50, 10, ids[element], border=1, align='C')
+        pdf.cell(100, 50, descriptions[element], border=1, align='C')
+        pdf.cell(50, 10, dates[element], border=1, align='C')
+        pdf.ln()
+
+    pdf.output(f'Informes/Informe_Top_10_Vulnerabilidades.pdf')
+    pdf_filename = f'Informes/Informe_Top_10_Vulnerabilidades.pdf'
+
+    return send_file(pdf_filename, as_attachment=True)
 @app.route('/news')
 def get_latest_cybersecurity_news():
     api_key = '3dc2316e4020483398ca6152bd8a7aa4'
@@ -217,6 +256,38 @@ def get_latest_cybersecurity_news():
             })
 
     return render_template('latest_news.html', articles=articles)
+
+@app.route('/top_tipos/<int:x>/downloadPDF')
+def generateTopTiposPDF(x):
+    tiempoMaxInci_ordenado = calculateTopTipos(x)
+
+    pdf = generatePDF()
+
+    pdf.cell(200, 10, txt=f'Informe Top {x} Tipos de incidencia con mayor tiempo de resolucion', ln=True, align='C')
+    pdf.ln(10)
+
+    pdf.set_fill_color(200, 200, 200)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(100, 10, "Nombre Incidencia", border=1, align='C', fill=True)
+    pdf.cell(50, 10, "Tiempo", border=1, align='C', fill=True)
+    pdf.ln()
+
+    for index, row in tiempoMaxInci_ordenado.iterrows():
+        pdf.cell(100, 10, row['nombre_incidencia'], border=1, align='C')
+        pdf.cell(50, 10, str(row['tiempo']), border=1, align='C')
+        pdf.ln()
+
+    pdf.output(f'Informes/Informe_Top_{x}_Incidencia.pdf')
+    pdf_filename = f'Informes/Informe_Top_{x}_Incidencia.pdf'
+
+    return send_file(pdf_filename, as_attachment=True)
+
+def generatePDF():
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    return pdf
 
 if __name__ == '__main__':
     app.run(debug=False)
