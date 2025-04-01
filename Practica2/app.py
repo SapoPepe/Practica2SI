@@ -160,11 +160,22 @@ def get_top_tipos(x):
 def get_last_vulns():
     req = requests.get("https://cve.circl.lu/api/last")
     data = json.loads(req.text)
+    ids = []
+    descriptions = []
+    dates = []
     for doc in data:
         try:
-            print(doc['cveMetadata']['cveId'], doc['containers']['cna']['descriptions'][0]['value'], doc['cveMetadata']['cveId']['dateUpdated'])
+            if len(ids) < 10:
+                ids.append(doc['cveMetadata']['cveId'].strip())
+                descriptions.append(doc['containers']['cna']['descriptions'][0]['value'].strip())
+                dates.append(doc['cveMetadata']['dateUpdated'])
+            else:
+                break
         except:
             pass
+
+    return render_template('last10_vulns.html', cves_ids=ids, cves_descriptions=descriptions, cves_dates=dates)
+
 
 if __name__ == '__main__':
     app.run(debug=False)

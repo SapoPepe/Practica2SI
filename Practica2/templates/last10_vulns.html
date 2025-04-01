@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Top 10 Últimas Vulnerabilidades</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 70%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            width: 100px;
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        </style>
+</head>
+<body>
+    <h1>Last 10 Vulnerabilities</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID CVE</th>
+                <th>Descripción</th>
+                <th>Última fecha de actualización</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i in range(cves_ids|length) %}
+            <tr>
+                <td>{{ cves_ids[i] }}</td>
+                <td>{{ cves_descriptions[i] }}</td>
+                <td>{{ cves_dates[i] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
