@@ -58,7 +58,7 @@
         }
         .scroll-to-top {
             position: fixed;
-            bottom: 20px;
+            bottom: 80px; /* Adjusted to leave space for the download button */
             right: 20px;
             background-color: #4CAF50;
             border: none;
@@ -75,7 +75,31 @@
             width: 20px;
             height: 20px;
         }
-        </style>
+        .download-pdf {
+            position: fixed;
+            bottom: 20px; /* Adjusted to appear below the scroll-to-top button */
+            right: 20px;
+            background-color: #FF0000; /* Red color */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Space between icon and text */
+        }
+        .download-pdf:hover {
+            background-color: #CC0000; /* Darker red on hover */
+        }
+        .download-icon {
+            fill: white;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
     <script>
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -112,6 +136,12 @@
     <button class="scroll-to-top" onclick="scrollToTop()">
         <svg viewBox="0 0 24 24">
             <path d="M12 2L3 13h6v7h6v-7h6z"/>
+        </svg>
+    </button>
+    <button class="download-pdf" onclick="window.location.href='/last10_vulns/downloadPDF'">
+        PDF
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="download-icon" viewBox="0 0 16 16">
+            <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1m-1 4v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 11.293V7.5a.5.5 0 0 1 1 0"/>
         </svg>
     </button>
 </body>

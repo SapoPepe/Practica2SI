@@ -7,6 +7,12 @@ import seaborn as sns
 import os
 from flask import Flask, render_template, jsonify, send_file
 from fpdf import FPDF
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer # Añadido Paragraph
+from reportlab.lib.styles import getSampleStyleSheet # Añadido getSampleStyleSheet
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.units import inch
+from reportlab.lib import colors
 app = Flask(__name__)
 
 with open('data_clasified.json', 'r', encoding='utf-8') as f:
@@ -213,31 +219,91 @@ def get_last_vulns():
 
     return render_template('last10_vulns.html', cves_ids=ids, cves_descriptions=descriptions, cves_dates=dates)
 
+
+# ... (resto de tus importaciones y código de Flask) ...
+
 @app.route('/last10_vulns/downloadPDF')
 def generateVulnPDF():
-    ids, descriptions, dates = obtainLastVulns()
+    try:
+        ids, descriptions, dates = obtainLastVulns()
 
-    pdf = generatePDF()
+        pdf_filename = 'Informes/Informe_Top_10_Vulnerabilidades.pdf'
+        os.makedirs(os.path.dirname(pdf_filename), exist_ok=True)
 
-    pdf.cell(200, 10, txt=f'Informe Top 10 Últimas Vulnerabilidades', ln=True, align='C')
-    pdf.ln(10)
+        pdf = SimpleDocTemplate(pdf_filename, pagesize=letter)
+        elements = []
 
-    pdf.set_fill_color(200, 200, 200)
-    pdf.set_font("Arial", 'B', 12)
-    pdf.cell(100, 10, "Nombre Cliente", border=1, align='C', fill=True)
-    pdf.cell(50, 10, "Incidencias", border=1, align='C', fill=True)
-    pdf.ln()
+        styles = getSampleStyleSheet()
 
-    for element in range(len(ids)):
-        pdf.cell(50, 10, ids[element], border=1, align='C')
-        pdf.cell(100, 50, descriptions[element], border=1, align='C')
-        pdf.cell(50, 10, dates[element], border=1, align='C')
-        pdf.ln()
+        title_style = styles['h1']
+        title_style.alignment = TA_CENTER
 
-    pdf.output(f'Informes/Informe_Top_10_Vulnerabilidades.pdf')
-    pdf_filename = f'Informes/Informe_Top_10_Vulnerabilidades.pdf'
+        header_style = styles['Normal']
+        header_style.textColor = colors.white
+        header_style.fontName = 'Helvetica-Bold'
+        header_style.alignment = TA_CENTER # Centrar texto de cabecera
 
-    return send_file(pdf_filename, as_attachment=True)
+
+        normal_style = styles['Normal']
+        normal_style.textColor = colors.black
+        normal_style.alignment = TA_LEFT
+        normal_style.fontSize = 9
+        normal_style.leading = 11
+
+        # --- TÍTULO ---
+        title_text = "Top 10 vulnerabilidades"
+        title = Paragraph(title_text, title_style)
+        elements.append(title)
+        elements.append(Spacer(1, 0.3*inch))
+
+        # --- DATOS PARA LA TABLA ---
+        data = [[Paragraph("ID CVE", header_style),
+                 Paragraph("Descripción", header_style),
+                 Paragraph("Fecha", header_style)]]
+
+        for i in range(len(ids)):
+            desc_paragraph = Paragraph(descriptions[i] if descriptions[i] else '', normal_style)
+            id_paragraph = Paragraph(ids[i] if ids[i] else '', normal_style)
+            date_paragraph = Paragraph(dates[i] if dates[i] else '', normal_style)
+            data.append([id_paragraph, desc_paragraph, date_paragraph])
+
+        # --- TABLA ---
+        table = Table(data, colWidths=[90, 320, 90])
+
+        # --- ESTILO DE LA TABLA ---
+        style = TableStyle([
+            # Cabecera: Fondo #4CAF50, texto centrado (controlado por Paragraph)
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4CAF50')),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+
+            # --- MODIFICACIÓN AQUÍ: Datos ---
+            # Fondo negro, alineación vertical arriba
+            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+            ('VALIGN', (0, 1), (-1, -1), 'TOP'),
+             ('ALIGN', (0, 1), (0, -1), 'LEFT'), # Columna ID
+             ('ALIGN', (1, 1), (1, -1), 'LEFT'), # Columna Descripción
+             ('ALIGN', (2, 1), (2, -1), 'CENTER'), # Columna Fecha (Ejemplo centrado)
+
+            # Rejilla y Relleno
+            ('GRID', (0, 0), (-1, -1), 1, colors.black), # Rejilla negra (podría no verse sobre fondo negro)
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ])
+        table.setStyle(style)
+        elements.append(table)
+        pdf.build(elements)
+        return send_file(pdf_filename, as_attachment=True)
+
+    except Exception as e:
+        print(f"Error generando PDF: {e}")
+        # import traceback
+        # print(traceback.format_exc())
+        return "Error al generar el informe PDF", 500
+
+
 @app.route('/news')
 def get_latest_cybersecurity_news():
     api_key = '3dc2316e4020483398ca6152bd8a7aa4'
