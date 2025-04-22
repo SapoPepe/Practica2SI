@@ -147,8 +147,8 @@ def get_top_clientes(x):
     #Ordenar y escoger los X clientes requeridos
     cliMaxIncidents_ordenado = calculateTopClientes(x)
 
-    tabla_html = cliMaxIncidents_ordenado.to_html(classes='data')
-    return render_template('top_clientes.html', tabla_html=tabla_html)
+    tabla_html = cliMaxIncidents_ordenado.to_html(index=False, classes='data')
+    return render_template('top_clientes.html', tabla_clientes_html=tabla_html)
 
 @app.route('/top_clientes/<int:x>/downloadPDF')
 def generateTopClientesPDF(x):
@@ -192,8 +192,8 @@ def calculateTopTipos(x):
 @app.route('/top_tipos/<int:x>')
 def get_top_tipos(x):
     tiempoMaxInci_ordenado = calculateTopTipos(x)
-    tabla_html = tiempoMaxInci_ordenado.to_html(classes='data')
-    return render_template('top_clientes.html', tabla_html=tabla_html)
+    tabla_html = tiempoMaxInci_ordenado.to_html(index=False, classes='data')
+    return render_template('top_tipos.html', tabla_tipo_html=tabla_html)
 
 def obtainLastVulns():
     req = requests.get("https://cve.circl.lu/api/last")

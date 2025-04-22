@@ -1,0 +1,7 @@
+fpdf
+pandas
+requests
+matplotlib
+seaborn
+flask
+reportlab

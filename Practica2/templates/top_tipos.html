@@ -1,0 +1,134 @@
+<!-- templates/top_tipos.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Top Tipos de Incidencias</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+            margin-top: 80px;
+        }
+        nav {
+            background-color: #4CAF50;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            position: fixed;
+            top: 10px;
+            width: 90%;
+            max-width: 1200px;
+            box-sizing: border-box;
+            z-index: 1000;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+        }
+        table {
+            width: 70%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th, td {
+            padding: 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .download-pdf {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: #FF0000;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .download-pdf:hover {
+            background-color: #CC0000;
+        }
+        .download-pdf svg {
+            fill: white;
+            width: 20px;
+            height: 20px;
+        }
+        .scroll-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .scroll-to-top svg {
+            fill: white;
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+    <script>
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</head>
+<body>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/top_tipos/1">Top Tipos</a>
+        <a href="/top_clientes/1">Top Clientes</a>
+        <a href="/last10_vulns">Últimas Vulnerabilidades</a>
+        <a href="/news">Últimas Noticias</a>
+    </nav>
+
+    <h1>Top Tipos de Incidencias</h1>
+    {{ tabla_tipo_html|safe }}
+
+    <button class="download-pdf"
+            onclick="window.location.href='/top_tipos/{{ request.view_args.x }}/downloadPDF'">
+        PDF
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
+            <path d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1m-1 4v3.793l1.146-1.147a.5.5 0 0 1 .708.708l-2 2a.5.5 0 0 1-.708 0l-2-2a.5.5 0 0 1 .708-.708L7.5 11.293V7.5a.5.5 0 0 1 1 0"/>
+        </svg>
+    </button>
+
+    <button class="scroll-to-top" onclick="scrollToTop()">
+        <svg viewBox="0 0 24 24"><path d="M12 2L3 13h6v7h6v-7h6z"/></svg>
+    </button>
+</body>
+</html>
