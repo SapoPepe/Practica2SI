@@ -154,6 +154,7 @@ def get_top_clientes(x):
 def generateTopClientesPDF(x):
     cliMaxIncidents_ordenado = calculateTopClientes(x)
 
+    os.makedirs('Informes', exist_ok=True)
     pdf = generatePDF()
 
     pdf.cell(200, 10, txt=f'Informe Top {x} Clientes con Incidencias', ln=True, align='C')
@@ -166,12 +167,12 @@ def generateTopClientesPDF(x):
     pdf.ln()
 
     for index, row in cliMaxIncidents_ordenado.iterrows():
-        pdf.cell(100, 10, row['nombre_incidencia'], border=1, align='C')
-        pdf.cell(50, 10, str(row['tiempo']), border=1, align='C')
+        pdf.cell(100, 10, row['nombre_cliente'], border=1, align='C')
+        pdf.cell(50, 10, str(row['incidencias']), border=1, align='C')
         pdf.ln()
 
-    pdf.output(f'Informes/Informe_Top_{x}_Clientes.pdf')
     pdf_filename = f'Informes/Informe_Top_{x}_Clientes.pdf'
+    pdf.output(pdf_filename)
 
     return send_file(pdf_filename, as_attachment=True)
 
@@ -343,8 +344,9 @@ def generateTopTiposPDF(x):
         pdf.cell(50, 10, str(row['tiempo']), border=1, align='C')
         pdf.ln()
 
-    pdf.output(f'Informes/Informe_Top_{x}_Incidencia.pdf')
-    pdf_filename = f'Informes/Informe_Top_{x}_Incidencia.pdf'
+    pdf_filename = f'Informes/Informe_Top_{x}_Tipos.pdf'
+    pdf.output(pdf_filename)
+    
 
     return send_file(pdf_filename, as_attachment=True)
 
