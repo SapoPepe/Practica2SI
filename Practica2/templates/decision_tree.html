@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clasificar Cliente Crítico</title>
+</head>
+<body>
+    <h1>¿Es este ticket crítico?</h1>
+    <form method="POST">
+        <label>Cliente:</label>
+        <select name="cliente">
+            {% for cliente in clientes %}
+                <option value="{{ cliente.id_cli }}">{{ cliente.nombre }}</option>
+            {% endfor %}
+        </select><br>
+
+        <label>Tipo de Incidencia:</label>
+        <select name="tipo_incidencia">
+            {% for inc in incidentes %}
+                <option value="{{ inc.id_incidencia }}">{{ inc.nombre }}</option>
+            {% endfor %}
+        </select><br>
+
+        <label>¿Es mantenimiento?</label>
+        <select name="es_mantenimiento">
+            <option value="1">Sí</option>
+            <option value="0">No</option>
+        </select><br>
+
+        <label>Tiempo de Resolución (horas):</label>
+        <input type="number" name="tiempo_resolucion" step="0.1" required><br>
+
+        <button type="submit">Predecir</button>
+    </form>
+</body>
+</html>

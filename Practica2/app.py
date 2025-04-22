@@ -4,11 +4,14 @@ import pandas as pd
 import requests
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn import tree
+import graphviz
+import numpy as np
 import os
 from flask import Flask, render_template, jsonify, send_file
 from fpdf import FPDF
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer # Añadido Paragraph
-from reportlab.lib.styles import getSampleStyleSheet # Añadido getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.units import inch
@@ -356,6 +359,53 @@ def generatePDF():
     pdf.set_font("Arial", size=12)
 
     return pdf
+
+
+@app.route('/decisionTree')
+def makeDecisionTreeClasifier():
+    dataClasified = open('data_clasified.json', 'r')
+    dataClasified = json.load(dataClasified)
+
+    tickets = dataClasified['tickets_emitidos']
+
+    X = []
+    y = []
+
+    for ticket in tickets:
+        features = [
+            ticket['tipo_incidencia'],
+            ticket['es_mantenimiento'],
+            ticket['satisfaccion_cliente']
+        ]
+        X.append(features)
+
+        if ticket['es_critico']:
+            y.append(1)
+        else:
+            y.append(0)
+
+    X = np.array(X)
+    y = np.array(y)
+
+    feature_names = ['Tipo Incidencia', 'Es Mantenimiento', 'Satisfacción Cliente']
+    class_names = ['No Crítico', 'Crítico']
+
+    clf = tree.DecisionTreeClassifier()
+    clf.fit(X, y)
+    dot_data = tree.export_graphviz(clf, out_file=None,
+                                    feature_names=feature_names,
+                                    class_names=class_names,
+                                    filled=True, rounded=True,
+                                    special_characters=True, proportion=True,impurity=False)
+
+
+    #REVISAR
+    graph = graphviz.Source(dot_data)
+
+    output_path = 'static/graphs/decision_tree_critico'
+    graph.render(output_path, format='png', cleanup=True)
+
+    return send_file(output_path + '.png', mimetype='image/png')
 
 if __name__ == '__main__':
     app.run(debug=False)
