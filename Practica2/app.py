@@ -1,14 +1,14 @@
 import sqlite3
 import json
+from datetime import datetime
+
 import pandas as pd
 import requests
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn import tree
 import graphviz
 import numpy as np
 import os
-from flask import Flask, render_template, jsonify, send_file
+from flask import Flask, render_template, jsonify, send_file, request
 from fpdf import FPDF
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
@@ -16,6 +16,10 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.units import inch
 from reportlab.lib import colors
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
 app = Flask(__name__)
 
 with open('data_clasified.json', 'r', encoding='utf-8') as f:
@@ -406,6 +410,138 @@ def makeDecisionTreeClasifier():
     graph.render(output_path, format='png', cleanup=True)
 
     return send_file(output_path + '.png', mimetype='image/png')
+
+# Función para calcular la duración del ticket en días
+def calcular_duracion(fecha_apertura, fecha_cierre):
+    apertura = datetime.strptime(fecha_apertura, "%Y-%m-%d")
+    cierre = datetime.strptime(fecha_cierre, "%Y-%m-%d")
+    return (cierre - apertura).days
+
+    # Función para calcular el tiempo total de contacto con empleados
+def calcular_tiempo_contacto(contactos):
+    return sum(contacto['tiempo'] for contacto in contactos)
+
+@app.route('/predictions')
+def predictions():
+    return render_template('predictions.html')
+@app.route('/predict', methods=['POST'])
+def predict():
+    # Obtener datos del formulario
+    fecha_apertura = request.form['fecha_apertura']
+    fecha_cierre = request.form['fecha_cierre']
+    es_mantenimiento = request.form['es_mantenimiento'] == 'true'
+    satisfaccion = int(request.form['satisfaccion_cliente'])
+    tipo_incidencia = int(request.form['tipo_incidencia'])
+    metodo = request.form['metodo']  # Corregí un typo aquí (metodo)
+    tiempo_contacto = float(request.form.get('tiempo_contacto', 2.0))
+    num_contactos = int(request.form.get('num_contactos', 1))
+
+    if metodo == "regresion":
+        with open('data_clasified.json', 'r') as file:
+            data = json.load(file)
+
+        tickets = data['tickets_emitidos']
+
+        # Preparar los datos para el modelo
+        features = []
+        labels = []
+
+        for ticket in tickets:
+            duracion = calcular_duracion(ticket['fecha_apertura'], ticket['fecha_cierre'])
+            ticket_tiempo_contacto = calcular_tiempo_contacto(ticket['contactos_con_empleados'])
+            ticket_num_contactos = len(ticket['contactos_con_empleados'])
+
+            ticket_es_mantenimiento = 1 if ticket['es_mantenimiento'] else 0
+            ticket_tipo_incidencia = ticket['tipo_incidencia']
+            ticket_satisfaccion = ticket['satisfaccion_cliente']
+
+            # Agregar características
+            features.append([
+                duracion,
+                ticket_tiempo_contacto,
+                ticket_num_contactos,
+                ticket_es_mantenimiento,
+                ticket_tipo_incidencia,
+                ticket_satisfaccion
+            ])
+
+            # Etiqueta (variable objetivo)
+            labels.append(1 if ticket['es_critico'] else 0)
+
+        df = pd.DataFrame(features, columns=[
+            'duracion',
+            'tiempo_contacto',
+            'num_contactos',
+            'es_mantenimiento',
+            'tipo_incidencia',
+            'satisfaccion'
+        ])
+        df['es_critico'] = labels
+
+        # Dividir datos en entrenamiento y prueba
+        X = df.drop('es_critico', axis=1)
+        y = df['es_critico']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Estandarizar características
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_test_scaled = scaler.transform(X_test)
+
+        # Entrenar el modelo
+        model = LogisticRegression()
+        model.fit(X_train_scaled, y_train)
+
+        # Evaluar el modelo
+        y_pred = model.predict(X_test_scaled)
+        accuracy = accuracy_score(y_test, y_pred)
+        print(f"Precisión del modelo: {accuracy:.2f}")
+
+        # Calcular duración para la predicción
+        duracion_pred = calcular_duracion(fecha_apertura, fecha_cierre)
+
+        # Preparar características para predicción usando valores del formulario
+        features_pred = [
+            duracion_pred,
+            tiempo_contacto,
+            num_contactos,
+            1 if es_mantenimiento else 0,
+            tipo_incidencia,
+            satisfaccion
+        ]
+
+        # Estandarizar y predecir
+        features_scaled = scaler.transform([features_pred])
+        prediction = model.predict(features_scaled)
+        prediction_proba = model.predict_proba(features_scaled)[0]
+
+        es_critico = bool(prediction[0])
+        probabilidad = prediction_proba[1] if es_critico else prediction_proba[0]
+
+        return jsonify({
+            'es_critico': es_critico,
+            'probabilidad': float(probabilidad),
+            'mensaje': "Crítico" if es_critico else "No crítico",
+            'metodo': "Regresión Logística"
+        })
+
+    elif metodo == "decision":
+        return jsonify({
+            'es_critico': '0',
+            'mensaje': "Crítico" if 0 else "No crítico",
+            'metodo': 'Decision Tree'
+        })
+
+    elif metodo == "random":
+        return jsonify({
+            'es_critico': '0',
+            'mensaje': "Crítico" if 0 else "No crítico",
+            'metodo': 'Random Forest'
+        })
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
 
 if __name__ == '__main__':
     app.run(debug=False)
