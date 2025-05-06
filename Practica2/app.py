@@ -359,11 +359,24 @@ def calculateTopTipos(x):
 
     return tiempoMaxInci_ordenado
 
-@app.route('/top_tipos/<int:x>')
-def get_top_tipos(x):
-    tiempoMaxInci_ordenado = calculateTopTipos(x)
-    tabla_html = tiempoMaxInci_ordenado.to_html(index=False, classes='data')
-    return render_template('top_tipos.html', tabla_tipo_html=tabla_html)
+@app.route('/top_tipos', methods=['GET'])
+def get_top_tipos():
+    try:
+        num_tipos_str = request.args.get('num_tipos', '5')
+        num_tipos = int(num_tipos_str)
+        if num_tipos <= 0: # Evitar valores no positivos
+            num_tipos = 5
+    except ValueError:
+        num_tipos = 5 # Valor por defecto si la conversión falla
+
+    top_tipos_data = calculateTopTipos(num_tipos)
+    if top_tipos_data.empty:
+        tabla_html = "<p>No hay datos de tipos de incidencia para mostrar.</p>"
+    else:
+        tabla_html = top_tipos_data.to_html(index=False, classes='data')
+
+        # Pasar el número actual a la plantilla para el PDF y el valor del input
+    return render_template('top_tipos.html', tabla_tipo_html=tabla_html, current_num_tipos=num_tipos)
 
 def obtainLastVulns():
     req = requests.get("https://cve.circl.lu/api/last")
@@ -493,8 +506,16 @@ def get_latest_cybersecurity_news():
 
     return render_template('latest_news.html', articles=articles)
 
-@app.route('/top_tipos/<int:x>/downloadPDF')
-def generateTopTiposPDF(x):
+@app.route('/top_tipos/downloadPDF', methods=['GET'])
+def generateTopTiposPDF():
+    try:
+        num_tipos_str = request.args.get('num_tipos', '5')
+        x = int(num_tipos_str)
+        if x <= 0:
+            x = 5
+    except ValueError:
+        x = 5
+
     tiempoMaxInci_ordenado = calculateTopTipos(x)
 
     pdf = generatePDF()
