@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Predicción Ticket Crítico</title>
+    <style>
+        body { font-family: sans-serif; margin: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: 20px auto; background-color: #fff; padding: 30px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1, h2 { color: #333; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        /* Ajuste para incluir input[type=date] */
+        input[type=number], input[type=checkbox], input[type=date], select {
+            margin-bottom: 15px;
+            padding: 10px;
+            width: calc(100% - 22px);
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1em;
+            box-sizing: border-box; /* Añadido para mejor consistencia de tamaño */
+        }
+        input[type=checkbox] { width: auto; margin-right: 5px; vertical-align: middle; }
+        button { background-color: #5cb85c; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button:hover { background-color: #4cae4c; }
+        .result-section { margin-top: 30px; }
+        .result { padding: 15px; border-radius: 4px; margin-bottom: 15px; }
+        .result.success { background-color: #dff0d8; border: 1px solid #d6e9c6; color: #3c763d; }
+        .result.error { background-color: #f2dede; border: 1px solid #ebccd1; color: #a94442; }
+        .result.info { background-color: #d9edf7; border: 1px solid #bce8f1; color: #31708f; }
+        .disabled-form { opacity: 0.6; pointer-events: none; }
+        .tree-visualization { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+        .tree-visualization img { max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; }
+        .tree-visualization .tree-container { flex: 1 1 calc(50% - 15px); text-align: center; }
+        .form-inline-label { display: inline-block; margin-left: 5px; font-weight: normal; vertical-align: middle; }
+        nav { background-color: #4CAF50; padding: 10px; border-radius: 10px; display: flex; justify-content: center; margin-bottom: 20px; }
+        nav a { color: white; text-decoration: none; margin: 0 15px; font-weight: bold; }
+        b, strong { color: #d9534f; } /* Resaltar Crítico */
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/predict_critical">Predecir Crítico</a>
+        <a href="/top_tipos/1">Top Tipos</a>
+        <a href="/top_clientes/1">Top Clientes</a>
+        <a href="/last10_vulns">Top 10 Últimas Vulnerabilidades</a>
+        <a href="/news">Últimas Noticias de Ciberseguridad</a>
+    </nav>
+
+    <div class="container">
+        <h1>Predicción Ticket Crítico</h1>
+
+        {% if model_error %}
+        <div class="result error">
+            <p>{{ model_error }}</p>
+        </div>
+        {% endif %}
+
+        {% if prediction_text %}
+        <div class="result success">
+            <p>{{ prediction_text|safe }}</p>
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="result error">
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('predict_critical_ticket') }}" class="{{ 'disabled-form' if model_error else '' }}">
+            <h2>Seleccionar Modelo de Predicción</h2>
+            <label for="model_selection">Modelo:</label>
+            <select id="model_selection" name="model_selection" required>
+                <option value="linear_regression" {% if form_data.get('model_selection') == 'linear_regression' %}selected{% endif %}>Regresión Logística</option>
+                <option value="decision_tree" {% if form_data.get('model_selection') == 'decision_tree' %}selected{% endif %}>Árbol de Decisión</option>
+                <option value="random_forest" {% if form_data.get('model_selection') == 'random_forest' %}selected{% endif %}>Random Forest</option>
+            </select>
+
+            <h2>Introducir Datos del Ticket</h2>
+
+            <label for="cliente_id">ID Cliente:</label>
+            <input type="number" id="cliente_id" name="cliente_id" required value="{{ form_data.get('cliente_id', '') }}" {{ 'disabled' if model_error else '' }}>
+
+            <label for="fecha_apertura">Fecha de Apertura:</label>
+            <input type="date" id="fecha_apertura" name="fecha_apertura" required value="{{ form_data.get('fecha_apertura', '') }}" {{ 'disabled' if model_error else '' }}>
+
+            <label for="fecha_cierre">Fecha de Cierre:</label>
+            <input type="date" id="fecha_cierre" name="fecha_cierre" required value="{{ form_data.get('fecha_cierre', '') }}" {{ 'disabled' if model_error else '' }}>
+            <label for="satisfaccion">Satisfacción Cliente (0-10):</label>
+            <input type="number" id="satisfaccion" name="satisfaccion" min="0" max="10" required value="{{ form_data.get('satisfaccion', '') }}" {{ 'disabled' if model_error else '' }}>
+
+            <label for="tipo_incidencia">Tipo de Incidencia (ej: 1-5):</label> <input type="number" id="tipo_incidencia" name="tipo_incidencia" required value="{{ form_data.get('tipo_incidencia', '') }}" {{ 'disabled' if model_error else '' }}>
+
+            <label for="es_mantenimiento">
+                <input type="checkbox" id="es_mantenimiento" name="es_mantenimiento" value="1" {{ 'checked' if form_data.get('es_mantenimiento') == '1' else '' }} {{ 'disabled' if model_error else '' }}>
+                <span class="form-inline-label">¿Es Mantenimiento?</span>
+            </label>
+
+            <button type="submit">Predecir 🪄</button>
+        </form>
+
+        {% if tree_images_data or regression_image_data %}
+        <h2>Visualización del Modelo</h2>
+        <div class="tree-visualization">
+            {# Para Random Forest que puede tener múltiples imágenes #}
+            {% if form_data.get('model_selection') == 'random_forest' and tree_images_data %}
+                {% for image_data in tree_images_data %}
+                <div class="tree-container">
+                    <img src="data:image/png;base64,{{ image_data }}" alt="Árbol {{ loop.index }}">
+                    <p>Árbol {{ loop.index }}</p>
+                </div>
+                {% endfor %}
+            {# Para modelos que generan una sola imagen (LogReg, DT) #}
+            {% elif regression_image_data %}
+                <div class="tree-container" style="flex: 1 1 100%;">
+                    <img src="data:image/png;base64,{{ regression_image_data }}" alt="Visualización del Modelo">
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
