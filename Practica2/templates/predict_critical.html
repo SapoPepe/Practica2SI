@@ -71,7 +71,7 @@
             <h2>Seleccionar Modelo de Predicción</h2>
             <label for="model_selection">Modelo:</label>
             <select id="model_selection" name="model_selection" required>
-                <option value="linear_regression" {% if form_data.get('model_selection') == 'linear_regression' %}selected{% endif %}>Regresión Logística</option>
+                <option value="linear_regression" {% if form_data.get('model_selection') == 'linear_regression' %}selected{% endif %}>Regresión Lineal</option>
                 <option value="decision_tree" {% if form_data.get('model_selection') == 'decision_tree' %}selected{% endif %}>Árbol de Decisión</option>
                 <option value="random_forest" {% if form_data.get('model_selection') == 'random_forest' %}selected{% endif %}>Random Forest</option>
             </select>

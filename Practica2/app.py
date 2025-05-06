@@ -34,11 +34,18 @@ clf_logreg = None
 clf_dt = None
 scaler_logreg = None
 
-# Características y nombres de clases
 feature_cols = ['cliente', 'duracion', 'es_mantenimiento', 'satisfaccion_cliente', 'tipo_incidencia']
 class_names = ['No Crítico', 'Crítico']
+validation_metrics = {}
 
+# --- Variables Globales para Conjuntos de Datos Divididos ---
+X_train_global, X_val_global, X_test_global = None, None, None
+y_train_global, y_val_global, y_test_global = None, None, None
 
+# --- Abrir Datos desde JSON ---
+with open('data_clasified.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+tickets_data = data['tickets_emitidos']
 
 def generar_grafica_arbol_base64(model, feature_names_list, class_names_list, title="Visualización del Árbol"):
     dot_data = export_graphviz(model, out_file=None,
@@ -58,7 +65,6 @@ def generar_grafica_arbol_base64(model, feature_names_list, class_names_list, ti
     except Exception as e_gen:
         app.logger.error(f"Error general al generar gráfica de árbol: {e_gen}")
         return None
-
 
 def generar_grafica_coeficientes_base64(model, feature_names_list, title="Importancia de Características"):
     if not hasattr(model, 'coef_'):
@@ -88,100 +94,99 @@ def generar_grafica_coeficientes_base64(model, feature_names_list, title="Import
     return img_base64
 
 
-# --- Funciones de Entrenamiento ---
-def cargar_y_preparar_datos():
-    """Carga datos de data_clasified.json y realiza preprocesamiento, incluyendo 'duracion'."""
-    global feature_cols  # Para asegurar que usamos la lista actualizada
+# --- Carga y Preparación de Datos ---
+def cargar_y_preparar_datos_globales():
+    global X_train_global, X_val_global, X_test_global, y_train_global, y_val_global, y_test_global, feature_cols
+    app.logger.info("Cargando y preparando datos globales...")
     try:
-        with open('data_clasified.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-
-        tickets_data = data['tickets_emitidos']
-
-        # Crear una lista de diccionarios para construir el DataFrame fácilmente
         processed_tickets = []
         for ticket in tickets_data:
-            duracion = calcular_duracion(ticket['fecha_apertura'], ticket['fecha_cierre'])
+            fecha_apertura = ticket.get('fecha_apertura')
+            fecha_cierre = ticket.get('fecha_cierre')
+            duracion = calcular_duracion(fecha_apertura, fecha_cierre) if fecha_apertura and fecha_cierre else 0
             processed_ticket = {
-                'cliente': int(ticket['cliente']),
-                'duracion': duracion,  # Nueva característica
-                'es_mantenimiento': 1 if ticket['es_mantenimiento'] else 0,
-                'satisfaccion_cliente': int(ticket['satisfaccion_cliente']),
-                'tipo_incidencia': int(ticket['tipo_incidencia']),
-                'es_critico': 1 if ticket['es_critico'] else 0
+                'cliente': int(ticket.get('cliente', 0)), 'duracion': duracion,
+                'es_mantenimiento': 1 if ticket.get('es_mantenimiento') else 0,
+                'satisfaccion_cliente': int(ticket.get('satisfaccion_cliente', 0)),
+                'tipo_incidencia': int(ticket.get('tipo_incidencia', 0)),
+                'es_critico': 1 if ticket.get('es_critico') else 0
             }
             processed_tickets.append(processed_ticket)
 
         df = pd.DataFrame(processed_tickets)
 
-        # Verificar que todas las columnas necesarias estén presentes
-        # 'es_critico' es el target, feature_cols son las características
         required_cols_for_training = feature_cols + ['es_critico']
         if not all(col in df.columns for col in required_cols_for_training):
             missing_cols = [col for col in required_cols_for_training if col not in df.columns]
-            raise KeyError(
-                f"Faltan columnas requeridas en el DataFrame procesado: {missing_cols}. Columnas actuales: {df.columns.tolist()}")
+            raise KeyError(f"Faltan columnas: {missing_cols}. Actuales: {df.columns.tolist()}")
 
-        X = df[feature_cols]  # Usar la lista global actualizada
+        X = df[feature_cols]
         y = df['es_critico']
-        return X, y, df
-    except FileNotFoundError:
-        app.logger.error("Error: El archivo 'data_clasified.json' no fue encontrado.")
-        raise
-    except json.JSONDecodeError:
-        app.logger.error("Error: El archivo 'data_clasified.json' no es un JSON válido.")
-        raise
-    except KeyError as e:
-        app.logger.error(f"Error de clave al procesar 'data_clasified.json': {e}")
-        raise
+
+
+        X_train_temp, X_test_global, y_train_temp, y_test_global = train_test_split(X, y, test_size=0.20, random_state=42, stratify=y if y.nunique() > 1 and y.value_counts().min() >= 2 else None)
+
+        X_train_global, X_val_global, y_train_global, y_val_global = train_test_split(X_train_temp, y_train_temp, test_size=0.25, random_state=42, stratify=y_train_temp)
+
+        app.logger.info(f"Datos cargados y divididos: Ent={len(X_train_global) if X_train_global is not None else 0}, Val={len(X_val_global) if X_val_global is not None else 0}, Test={len(X_test_global) if X_test_global is not None else 0}")
+
     except Exception as e_load:
-        app.logger.error(f"Error inesperado al cargar y preparar datos: {e_load}", exc_info=True)
-        raise
+        app.logger.error(f"Error fatal al preparar datos globales: {e_load}", exc_info=True)
+        # Dejar las variables globales como None para que los modelos no se entrenen
+        X_train_global, X_val_global, X_test_global, y_train_global, y_val_global, y_test_global = [None] * 6
 
 
-def entrenar_modelo_rf():
+# --- Funciones de Entrenamiento de Modelos ---
+def entrenar_modelo_rf(X_train, y_train):
     global clf_rf
-    print("Entrenando modelo Random Forest...")
+    if X_train is None or y_train is None or X_train.empty:
+        app.logger.error("Random Forest: Datos de entrenamiento no disponibles. No se puede entrenar.")
+        clf_rf = None
+        return
     try:
-        X, y, _ = cargar_y_preparar_datos()
         clf_rf = RandomForestClassifier(max_depth=3, random_state=0, n_estimators=10)
-        clf_rf.fit(X, y)
-        print("Modelo Random Forest entrenado exitosamente.")
+        clf_rf.fit(X_train, y_train)
+        app.logger.info("Modelo Random Forest entrenado exitosamente.")
     except Exception as e:
-        print(f"Error al entrenar Random Forest: {e}")
+        app.logger.error(f"Error al entrenar Random Forest: {e}", exc_info=True)
         clf_rf = None
 
-def entrenar_modelo_logreg():
-    global clf_logreg, scaler_logreg
-    print("Entrenando modelo Regresión Logística...")
-    try:
-        X, y, _ = cargar_y_preparar_datos()
-        scaler_logreg = StandardScaler()
-        X_scaled = scaler_logreg.fit_transform(X)
-        clf_logreg = LogisticRegression(random_state=0, solver='liblinear')
-        clf_logreg.fit(X_scaled, y)
-        print("Modelo Regresión Logística entrenado exitosamente.")
-    except Exception as e:
-        print(f"Error al entrenar Regresión Logística: {e}")
-        clf_logreg = None
-        scaler_logreg = None
 
-def entrenar_modelo_dt():
-    global clf_dt
-    print("Entrenando modelo Árbol de Decisión...")
+def entrenar_modelo_logreg(X_train, y_train):
+    global clf_logreg, scaler_logreg
+    app.logger.info("Entrenando modelo Regresión Lineal...")
+    if X_train is None or y_train is None or X_train.empty:
+        app.logger.error("Regresión Lineal: Datos de entrenamiento no disponibles.")
+        clf_logreg, scaler_logreg = None, None
+        return
     try:
-        X, y, _ = cargar_y_preparar_datos()
-        clf_dt = DecisionTreeClassifier(max_depth=5, random_state=0)
-        clf_dt.fit(X, y)
-        print("Modelo Árbol de Decisión entrenado exitosamente.")
+        scaler_logreg = StandardScaler()
+        X_train_scaled = scaler_logreg.fit_transform(X_train)
+
+        clf_logreg = LogisticRegression(random_state=0, solver='liblinear')
+        clf_logreg.fit(X_train_scaled, y_train)
+        app.logger.info("Modelo Regresión Lineal entrenado exitosamente.")
     except Exception as e:
-        print(f"Error al entrenar Árbol de Decisión: {e}")
+        app.logger.error(f"Error al entrenar Regresión Lineal: {e}", exc_info=True)
+        clf_logreg, scaler_logreg = None, None
+
+
+def entrenar_modelo_dt(X_train, y_train):
+    global clf_dt
+    app.logger.info("Entrenando modelo Árbol de Decisión...")
+    if X_train is None or y_train is None or X_train.empty:
+        app.logger.error("Árbol de Decisión: Datos de entrenamiento no disponibles.")
+        clf_dt = None
+        return
+    try:
+        clf_dt = DecisionTreeClassifier(max_depth=5, random_state=0)
+        clf_dt.fit(X_train, y_train)
+        app.logger.info("Modelo Árbol de Decisión entrenado exitosamente.")
+    except Exception as e:
+        app.logger.error(f"Error al entrenar Árbol de Decisión: {e}", exc_info=True)
         clf_dt = None
 
 
-with open('data_clasified.json', 'r', encoding='utf-8') as f:
-    data = json.load(f)
-tickets = data['tickets_emitidos']
 
 def leerJSON(cur, con):
     ficheroJSON = open('datos.json', 'r')
@@ -274,7 +279,7 @@ def crearBBDD():
 
 def top_clientes_incidencias(x):
     clientes = {}
-    for ticket in tickets:
+    for ticket in tickets_data:
         cliente = ticket['cliente']
         clientes[cliente] = clientes.get(cliente, 0) + 1
     sorted_clientes = sorted(clientes.items(), key=lambda item: (-item[1], item[0]))
@@ -282,7 +287,7 @@ def top_clientes_incidencias(x):
 
 def top_tipos_tiempo_resolucion(x):
     tipos = {}
-    for ticket in tickets:
+    for ticket in tickets_data:
         tipo = ticket['tipo_incidencia']
         tiempo_total = sum(contacto['tiempo'] for contacto in ticket['contactos_con_empleados'])
         tipos[tipo] = tipos.get(tipo, 0) + tiempo_total
@@ -532,149 +537,114 @@ def calcular_duracion(fecha_apertura, fecha_cierre):
 def calcular_tiempo_contacto(contactos):
     return sum(contacto['tiempo'] for contacto in contactos)
 
-
-@app.route('/predict_critical', methods=['GET', 'POST'])
+@app.route('/predict_critical', methods=['GET','POST'])
 def predict_critical_ticket():
-    global clf_rf, clf_logreg, clf_dt, scaler_logreg, feature_cols, class_names
+    global clf_rf, clf_logreg, clf_dt, scaler_logreg, feature_cols, class_names, validation_metrics
 
     prediction_text = None
     error_message = None
     model_error = None
     form_data = request.form
-
     tree_images_data_rf = []
     single_model_image_data = None
-
-    # Re-entrenar si algún modelo es None (salvaguarda)
-    if clf_rf is None: entrenar_modelo_rf()
-    if clf_logreg is None or scaler_logreg is None: entrenar_modelo_logreg()  # Asegurar que scaler también se entrena
-    if clf_dt is None: entrenar_modelo_dt()
+    confusion_matrix_image = None
 
     if request.method == 'POST':
         try:
             model_selection = request.form.get('model_selection')
-            if not model_selection:
-                raise ValueError("No se seleccionó ningún modelo.")
+            if not model_selection: raise ValueError("No se seleccionó ningún modelo.")
 
-            # Obtener datos del formulario
             cliente_id_str = request.form.get('cliente_id')
-            fecha_apertura_str = request.form.get('fecha_apertura')  # NUEVO
-            fecha_cierre_str = request.form.get('fecha_cierre')  # NUEVO
+            fecha_apertura_str = request.form.get('fecha_apertura')
+            fecha_cierre_str = request.form.get('fecha_cierre')
             es_mantenimiento_str = request.form.get('es_mantenimiento')
             satisfaccion_str = request.form.get('satisfaccion')
             tipo_incidencia_str = request.form.get('tipo_incidencia')
 
-            # Validar y convertir datos
             if not all([cliente_id_str, fecha_apertura_str, fecha_cierre_str, satisfaccion_str, tipo_incidencia_str]):
-                raise ValueError("Todos los campos son requeridos (excepto ¿Es Mantenimiento?).")
+                raise ValueError("Todos los campos (excepto ¿Es Mantenimiento?) son requeridos.")
 
             cliente_id = int(cliente_id_str)
-            # fecha_apertura y fecha_cierre se usan para calcular duración
             es_mantenimiento = 1 if es_mantenimiento_str == '1' else 0
             satisfaccion = int(satisfaccion_str)
             tipo_incidencia = int(tipo_incidencia_str)
 
-            if not (0 <= satisfaccion <= 10):
-                raise ValueError("Satisfacción debe estar entre 0 y 10.")
+            if not (0 <= satisfaccion <= 10): raise ValueError("Satisfacción entre 0 y 10.")
 
-            # Calcular duración para la predicción
             duracion_pred = calcular_duracion(fecha_apertura_str, fecha_cierre_str)
-            if duracion_pred < 0:  # Validación adicional
-                raise ValueError("La fecha de cierre no puede ser anterior a la fecha de apertura.")
+            if duracion_pred < 0: raise ValueError("Fecha de cierre antes de apertura.")
 
-            # Preparar DataFrame de entrada para la predicción
-            # Asegurarse de que el orden coincida con `feature_cols`
             input_data_dict = {
-                'cliente': [cliente_id],
-                'duracion': [duracion_pred],  # Añadida duración
+                'cliente': [cliente_id], 'duracion': [duracion_pred],
                 'es_mantenimiento': [es_mantenimiento],
-                'satisfaccion_cliente': [satisfaccion],
-                'tipo_incidencia': [tipo_incidencia]
+                'satisfaccion_cliente': [satisfaccion], 'tipo_incidencia': [tipo_incidencia]
             }
-            input_features = pd.DataFrame(input_data_dict)[feature_cols]  # Reordenar según feature_cols
-
-            current_model = None
-            model_display_name = ""
-            prediction = None
-            proba = None
+            input_features = pd.DataFrame(input_data_dict)[feature_cols]
 
             if model_selection == 'random_forest':
                 if clf_rf is None:
-                    model_error = "El modelo Random Forest no está disponible o no pudo ser entrenado."
+                    model_error = "Random Forest no disponible."
                     raise ValueError(model_error)
-                current_model = clf_rf
-                model_display_name = "Random Forest"
+                current_model, model_display_name = clf_rf, "Random Forest"
                 prediction = current_model.predict(input_features)
                 proba = current_model.predict_proba(input_features)
-                for i, estimator in enumerate(current_model.estimators_[:min(3,
-                                                                             len(current_model.estimators_))]):  # Limitar a 3 para no sobrecargar
-                    img_data = generar_grafica_arbol_base64(estimator, feature_cols, class_names,
-                                                            title=f"Árbol {i + 1} de {model_display_name}")
+                for i, estimator in enumerate(current_model.estimators_[:min(3, len(current_model.estimators_))]):
+                    img_data = generar_grafica_arbol_base64(estimator, feature_cols, class_names, title=f"Árbol {i + 1} RF")
                     if img_data: tree_images_data_rf.append(img_data)
 
-            elif model_selection == 'linear_regression':  # Asumimos Logística
+            elif model_selection == 'linear_regression':
                 if clf_logreg is None or scaler_logreg is None:
-                    model_error = "El modelo de Regresión Logística no está disponible o no pudo ser entrenado."
+                    model_error = "Reg. Lineal no disponible."
                     raise ValueError(model_error)
-                current_model = clf_logreg
-                model_display_name = "Regresión Logística"
+                current_model, model_display_name = clf_logreg, "Regresión Lineal"
                 input_features_scaled = scaler_logreg.transform(input_features)
                 prediction = current_model.predict(input_features_scaled)
                 proba = current_model.predict_proba(input_features_scaled)
-                single_model_image_data = generar_grafica_coeficientes_base64(current_model, feature_cols,
-                                                                              title=f"Coeficientes - {model_display_name}")
+                single_model_image_data = generar_grafica_coeficientes_base64(current_model, feature_cols, title=f"Coefs - {model_display_name}")
 
             elif model_selection == 'decision_tree':
                 if clf_dt is None:
-                    model_error = "El modelo de Árbol de Decisión no está disponible o no pudo ser entrenado."
+                    model_error = "Árbol Decisión no disponible."
                     raise ValueError(model_error)
-                current_model = clf_dt
-                model_display_name = "Árbol de Decisión"
+                current_model, model_display_name = clf_dt, "Árbol de Decisión"
                 prediction = current_model.predict(input_features)
                 proba = current_model.predict_proba(input_features)
-                single_model_image_data = generar_grafica_arbol_base64(current_model, feature_cols, class_names,
-                                                                       title=f"Visualización - {model_display_name}")
+                single_model_image_data = generar_grafica_arbol_base64(current_model, feature_cols, class_names, title=f"Vis - {model_display_name}")
 
             else:
-                raise ValueError("Modelo de predicción no válido seleccionado.")
+                raise ValueError("Modelo no válido.")
 
             if prediction is not None and proba is not None:
                 resultado_clase = class_names[prediction[0]]
-                prediction_text = (
-                    f"El ticket analizado con <strong>{model_display_name}</strong> es: <strong>{resultado_clase}</strong><br>"
-                    f"(Probabilidades: {class_names[0]}={proba[0][0]:.2f}, "
-                    f"{class_names[1]}={proba[0][1]:.2f})")
+                prediction_text = (f"Ticket ({model_display_name}): <strong>{resultado_clase}</strong><br>"
+                                   f"(Probabilidades: {class_names[0]}={proba[0][0]:.2f}, {class_names[1]}={proba[0][1]:.2f})")
             else:
-                error_message = "No se pudo realizar la predicción."
-
+                error_message = "No se pudo predecir."
 
         except ValueError as ve:
-            error_message = f"Error en los datos introducidos o selección: {ve}"
-        except KeyError as ke:  # Aunque la validación anterior debería cubrir esto
-            error_message = f"Falta un campo en el formulario: {ke}"
+            error_message = f"Error datos/selección: {ve}"
+        except KeyError as ke:
+            error_message = f"Falta campo: {ke}"
         except Exception as e:
-            error_message = f"Error inesperado durante la predicción: {e}"
-            app.logger.error(
-                f"Error en predicción ({model_selection if 'model_selection' in locals() else 'desconocido'}): {e}",
-                exc_info=True)
+            error_message = f"Error inesperado: {e}"
+            app.logger.error(f"Error predicción: {e}", exc_info=True)
 
     return render_template('predict_critical.html',
-                           prediction_text=prediction_text,
-                           error=error_message,
-                           model_error=model_error,
-                           form_data=form_data,
-                           tree_images_data=tree_images_data_rf,
-                           regression_image_data=single_model_image_data)
+                           prediction_text=prediction_text, error=error_message, model_error=model_error,
+                           form_data=form_data, tree_images_data=tree_images_data_rf,
+                           regression_image_data=single_model_image_data,
+                           confusion_matrix_image=confusion_matrix_image)
 
 
-# --- Llamadas de Entrenamiento al Inicio ---
+# --- Carga inicial de datos y entrenamiento de modelos ---
 try:
-    entrenar_modelo_rf()
-    entrenar_modelo_logreg()
-    entrenar_modelo_dt()
+    cargar_y_preparar_datos_globales()
+    entrenar_modelo_rf(X_train_global, y_train_global)
+    entrenar_modelo_logreg(X_train_global, y_train_global)
+    entrenar_modelo_dt(X_train_global, y_train_global)
 except Exception as e_startup:
-    print(f"Error crítico durante el entrenamiento inicial de modelos: {e_startup}")
-    # Considerar cómo manejar esto (¿detener la app?)
+    app.logger.error(f"Error crítico durante la inicialización y entrenamiento: {e_startup}", exc_info=True)
+
 
 if __name__ == '__main__':
     app.run(debug=False)
