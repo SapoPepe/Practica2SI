@@ -31,8 +31,31 @@
         .tree-visualization img { max-width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; }
         .tree-visualization .tree-container { flex: 1 1 calc(50% - 15px); text-align: center; }
         .form-inline-label { display: inline-block; margin-left: 5px; font-weight: normal; vertical-align: middle; }
-        nav { background-color: #4CAF50; padding: 10px; border-radius: 10px; display: flex; justify-content: center; margin-bottom: 20px; }
-        nav a { color: white; text-decoration: none; margin: 0 15px; font-weight: bold; }
+        nav {
+            background-color: #4CAF50;
+            padding: 10px 0; /* Ajustado padding */
+            border-radius: 0; /* Sin redondeo para que ocupe todo el ancho */
+            display: flex;
+            justify-content: center;
+            position: fixed;
+            top: 0; /* Pegado arriba */
+            left: 0; /* Pegado a la izquierda */
+            width: 100%; /* Ocupa todo el ancho */
+            box-sizing: border-box;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: bold;
+            padding: 10px 5px; /* Añadido padding para mejor click */
+        }
+        nav a:hover {
+            background-color: #45a049; /* Efecto hover */
+            border-radius: 4px;
+        }
         b, strong { color: #d9534f; } /* Resaltar Crítico */
     </style>
 </head>
@@ -40,8 +63,8 @@
     <nav>
         <a href="/">Inicio</a>
         <a href="/predict_critical">Predecir Crítico</a>
-        <a href="/top_tipos/1">Top Tipos</a>
-        <a href="/top_clientes/1">Top Clientes</a>
+        <a href="/top_tipos">Top Tipos</a>
+        <a href="/top_clientes">Top Clientes</a>
         <a href="/last10_vulns">Top 10 Últimas Vulnerabilidades</a>
         <a href="/news">Últimas Noticias de Ciberseguridad</a>
     </nav>

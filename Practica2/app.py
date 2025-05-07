@@ -1,19 +1,7 @@
-import sqlite3
-import json
 from datetime import datetime
-import base64
-import pandas as pd
-import requests
-from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.ensemble import RandomForestClassifier
-import graphviz
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-matplotlib.use('Agg')
-import os
-from flask import Flask, render_template, jsonify, send_file, request
+from flask import Flask, render_template, send_file, request
 from fpdf import FPDF
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
@@ -23,9 +11,19 @@ from reportlab.lib.units import inch
 from reportlab.lib import colors
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import StandardScaler
+import sqlite3
+import json
+import base64
+import pandas as pd
+import requests
+import graphviz
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+import os
 import io
+matplotlib.use('Agg')
 app = Flask(__name__)
 
 # --- Variables Globales para Modelos ---
@@ -277,23 +275,6 @@ def crearBBDD():
     leerJSON(cur, con)
     return con
 
-def top_clientes_incidencias(x):
-    clientes = {}
-    for ticket in tickets_data:
-        cliente = ticket['cliente']
-        clientes[cliente] = clientes.get(cliente, 0) + 1
-    sorted_clientes = sorted(clientes.items(), key=lambda item: (-item[1], item[0]))
-    return sorted_clientes[:x]
-
-def top_tipos_tiempo_resolucion(x):
-    tipos = {}
-    for ticket in tickets_data:
-        tipo = ticket['tipo_incidencia']
-        tiempo_total = sum(contacto['tiempo'] for contacto in ticket['contactos_con_empleados'])
-        tipos[tipo] = tipos.get(tipo, 0) + tiempo_total
-    sorted_tipos = sorted(tipos.items(), key=lambda item: (-item[1], item[0]))
-    return sorted_tipos[:x]
-
 @app.route('/')
 def home():
 
@@ -311,13 +292,20 @@ def calculateTopClientes(x):
     cliMaxIncidents_ordenado = cliMaxInci.sort_values(by='incidencias', ascending=False)[:x]
 
     return cliMaxIncidents_ordenado
-@app.route('/top_clientes/<int:x>')
-def get_top_clientes(x):
+@app.route('/top_clientes')
+def get_top_clientes():
+    try:
+        x = request.args.get('num_clientes', '5')
+        x = int(x)
+        if x <= 0: # Evitar valores no positivos
+            x = 5
+    except ValueError:
+        x = 5 # Valor por defecto si la conversión falla
     #Ordenar y escoger los X clientes requeridos
     cliMaxIncidents_ordenado = calculateTopClientes(x)
 
     tabla_html = cliMaxIncidents_ordenado.to_html(index=False, classes='data')
-    return render_template('top_clientes.html', tabla_clientes_html=tabla_html)
+    return render_template('top_clientes.html', tabla_clientes_html=tabla_html, current_num_clientes=x)
 
 @app.route('/top_clientes/<int:x>/downloadPDF')
 def generateTopClientesPDF(x):
@@ -553,10 +541,6 @@ def calcular_duracion(fecha_apertura, fecha_cierre):
     apertura = datetime.strptime(fecha_apertura, "%Y-%m-%d")
     cierre = datetime.strptime(fecha_cierre, "%Y-%m-%d")
     return (cierre - apertura).days
-
-    # Función para calcular el tiempo total de contacto con empleados
-def calcular_tiempo_contacto(contactos):
-    return sum(contacto['tiempo'] for contacto in contactos)
 
 @app.route('/predict_critical', methods=['GET','POST'])
 def predict_critical_ticket():

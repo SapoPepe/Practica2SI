@@ -17,24 +17,28 @@
         }
         nav {
             background-color: #4CAF50;
-            padding: 10px;
-            border-radius: 10px;
+            padding: 10px 0; /* Ajustado padding */
+            border-radius: 0; /* Sin redondeo para que ocupe todo el ancho */
             display: flex;
             justify-content: center;
             position: fixed;
-            top: 10px;
-            width: 90%; /* Ajusta el ancho para que no sea 100% */
-            max-width: 1200px; /* Ancho máximo para el nav */
+            top: 0; /* Pegado arriba */
+            left: 0; /* Pegado a la izquierda */
+            width: 100%; /* Ocupa todo el ancho */
             box-sizing: border-box;
             z-index: 1000;
-            left: 50%; /* Centrar el nav */
-            transform: translateX(-50%); /* Centrar el nav */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         nav a {
             color: white;
             text-decoration: none;
             margin: 0 15px;
             font-weight: bold;
+            padding: 10px 5px; /* Añadido padding para mejor click */
+        }
+        nav a:hover {
+            background-color: #45a049; /* Efecto hover */
+            border-radius: 4px;
         }
         .news-container {
             display: grid;
@@ -137,8 +141,8 @@
     <nav>
         <a href="/">Inicio</a>
         <a href="/predict_critical">Predecir Crítico</a>
-        <a href="/top_tipos/1">Top Tipos</a>
-        <a href="/top_clientes/1">Top Clientes</a>
+        <a href="/top_tipos">Top Tipos</a>
+        <a href="/top_clientes">Top Clientes</a>
         <a href="/last10_vulns">Top 10 Últimas Vulnerabilidades</a>
         <a href="/news">Últimas Noticias de Ciberseguridad</a>
     </nav>
