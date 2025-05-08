@@ -9,7 +9,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.units import inch
 from reportlab.lib import colors
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import sqlite3
@@ -21,6 +21,7 @@ import graphviz
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import os
 import io
 matplotlib.use('Agg')
@@ -28,9 +29,9 @@ app = Flask(__name__)
 
 # --- Variables Globales para Modelos ---
 clf_rf = None
-clf_logreg = None
+clf_linreg = None
 clf_dt = None
-scaler_logreg = None
+scaler_linreg = None
 
 feature_cols = ['cliente', 'duracion', 'es_mantenimiento', 'satisfaccion_cliente', 'tipo_incidencia']
 class_names = ['No Crítico', 'Crítico']
@@ -66,30 +67,26 @@ def generar_grafica_arbol_base64(model, feature_names_list, class_names_list, ti
 
 def generar_grafica_coeficientes_base64(model, feature_names_list, title="Importancia de Características"):
     if not hasattr(model, 'coef_'):
-        app.logger.error("El modelo no tiene el atributo 'coef_'. No se puede generar gráfica de coeficientes.")
+        app.logger.error("Modelo sin 'coef_'.")
         return None
 
-    coeficientes = model.coef_[0]
+    coeficientes = model.coef_
     if len(coeficientes) != len(feature_names_list):
-        app.logger.error(
-            f"Discrepancia en número de coeficientes ({len(coeficientes)}) y nombres de características ({len(feature_names_list)})")
+        app.logger.error("Discrepancia coefs/features.")
         return None
 
+    fig = Figure(figsize=(10, max(6, len(feature_names_list) * 0.5)))
+    ax = fig.subplots()
     sorted_indices = np.argsort(np.abs(coeficientes))[::-1]
-
-    plt.figure(figsize=(10, max(6, len(feature_names_list) * 0.5)))
-    plt.barh(np.array(feature_names_list)[sorted_indices], coeficientes[sorted_indices], color="dodgerblue")
-    plt.xlabel("Valor del Coeficiente (Impacto en la predicción de 'Crítico')")
-    plt.title(title)
-    plt.gca().invert_yaxis()
-    plt.tight_layout()
-
+    ax.barh(np.array(feature_names_list)[sorted_indices], coeficientes[sorted_indices], color="dodgerblue")
+    ax.set_xlabel("Valor del Coeficiente")
+    ax.set_title(title)
+    ax.invert_yaxis()
+    fig.tight_layout()
     img_buffer = io.BytesIO()
-    plt.savefig(img_buffer, format='png')
+    fig.savefig(img_buffer, format='png')
     img_buffer.seek(0)
-    img_base64 = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-    plt.close()
-    return img_base64
+    return base64.b64encode(img_buffer.getvalue()).decode('utf-8')
 
 
 # --- Carga y Preparación de Datos ---
@@ -150,23 +147,20 @@ def entrenar_modelo_rf(X_train, y_train):
         clf_rf = None
 
 
-def entrenar_modelo_logreg(X_train, y_train):
-    global clf_logreg, scaler_logreg
-    app.logger.info("Entrenando modelo Regresión Lineal...")
+def entrenar_modelo_linreg(X_train, y_train):
+    global clf_linreg
     if X_train is None or y_train is None or X_train.empty:
-        app.logger.error("Regresión Lineal: Datos de entrenamiento no disponibles.")
-        clf_logreg, scaler_logreg = None, None
+        app.logger.error(f"Regresión Lineal: Datos de entrenamiento no disponibles.")
+        clf_linreg = None
         return
     try:
-        scaler_logreg = StandardScaler()
-        X_train_scaled = scaler_logreg.fit_transform(X_train)
+        clf_linreg = LinearRegression()
+        clf_linreg.fit(X_train, y_train)
+        app.logger.info(f"Modelo Regresión Lineal entrenado exitosamente.")
 
-        clf_logreg = LogisticRegression(random_state=0, solver='liblinear')
-        clf_logreg.fit(X_train_scaled, y_train)
-        app.logger.info("Modelo Regresión Lineal entrenado exitosamente.")
     except Exception as e:
-        app.logger.error(f"Error al entrenar Regresión Lineal: {e}", exc_info=True)
-        clf_logreg, scaler_logreg = None, None
+        app.logger.error(f"Error al entrenar Regresión Lineal: {e}", exc_info=True);
+        clf_linreg, scaler_linreg = None, None
 
 
 def entrenar_modelo_dt(X_train, y_train):
@@ -597,15 +591,31 @@ def predict_critical_ticket():
                     img_data = generar_grafica_arbol_base64(estimator, feature_cols, class_names, title=f"Árbol {i + 1} RF")
                     if img_data: tree_images_data_rf.append(img_data)
 
+                if prediction is not None and proba is not None:
+                    resultado_clase = class_names[prediction[0]]
+                    prediction_text = (f"Ticket ({model_display_name}): <strong>{resultado_clase}</strong><br>"
+                                       f"(Probabilidades: {class_names[0]}={proba[0][0]:.2f}, {class_names[1]}={proba[0][1]:.2f})")
+                else: error_message = "No se pudo predecir."
+
             elif model_selection == 'linear_regression':
-                if clf_logreg is None or scaler_logreg is None:
+                if clf_linreg is None:
                     model_error = "Reg. Lineal no disponible."
                     raise ValueError(model_error)
-                current_model, model_display_name = clf_logreg, "Regresión Lineal"
-                input_features_scaled = scaler_logreg.transform(input_features)
-                prediction = current_model.predict(input_features_scaled)
-                proba = current_model.predict_proba(input_features_scaled)
-                single_model_image_data = generar_grafica_coeficientes_base64(current_model, feature_cols, title=f"Coefs - {model_display_name}")
+                current_model, model_display_name = clf_linreg, "Regresión Lineal"
+
+                prediction = current_model.predict(input_features)
+                raw_score = current_model.predict(input_features)[0]  # Obtener puntuación cruda
+
+                single_model_image_data = generar_grafica_coeficientes_base64(current_model, feature_cols, title=f"Coeficientes - {model_display_name}")
+
+                if prediction is not None:
+                    # Aplicar umbral para decidir la clase
+                    threshold = 0.5
+                    resultado_clase = 1 if raw_score >= threshold else 0
+                    prediction_text = (
+                        f"Ticket ({model_display_name}): <strong>{class_names[resultado_clase]}</strong><br>"
+                        f"(Puntuación cruda: {raw_score:.3f}, Umbral: {threshold})")
+                else: error_message = "No se pudo predecir."
 
             elif model_selection == 'decision_tree':
                 if clf_dt is None:
@@ -616,15 +626,14 @@ def predict_critical_ticket():
                 proba = current_model.predict_proba(input_features)
                 single_model_image_data = generar_grafica_arbol_base64(current_model, feature_cols, class_names, title=f"Vis - {model_display_name}")
 
+                if prediction is not None and proba is not None:
+                    resultado_clase = class_names[prediction[0]]
+                    prediction_text = (f"Ticket ({model_display_name}): <strong>{resultado_clase}</strong><br>"
+                                       f"(Probabilidades: {class_names[0]}={proba[0][0]:.2f}, {class_names[1]}={proba[0][1]:.2f})")
+                else: error_message = "No se pudo predecir."
+                    
             else:
                 raise ValueError("Modelo no válido.")
-
-            if prediction is not None and proba is not None:
-                resultado_clase = class_names[prediction[0]]
-                prediction_text = (f"Ticket ({model_display_name}): <strong>{resultado_clase}</strong><br>"
-                                   f"(Probabilidades: {class_names[0]}={proba[0][0]:.2f}, {class_names[1]}={proba[0][1]:.2f})")
-            else:
-                error_message = "No se pudo predecir."
 
         except ValueError as ve:
             error_message = f"Error datos/selección: {ve}"
@@ -645,7 +654,7 @@ def predict_critical_ticket():
 try:
     cargar_y_preparar_datos_globales()
     entrenar_modelo_rf(X_train_global, y_train_global)
-    entrenar_modelo_logreg(X_train_global, y_train_global)
+    entrenar_modelo_linreg(X_train_global, y_train_global)
     entrenar_modelo_dt(X_train_global, y_train_global)
 except Exception as e_startup:
     app.logger.error(f"Error crítico durante la inicialización y entrenamiento: {e_startup}", exc_info=True)
