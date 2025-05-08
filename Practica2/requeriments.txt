@@ -5,6 +5,5 @@ matplotlib
 seaborn
 flask
 reportlab
-sklearn
 scikit-learn
 graphviz
