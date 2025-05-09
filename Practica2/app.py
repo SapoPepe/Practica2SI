@@ -384,9 +384,6 @@ def get_last_vulns():
 
     return render_template('last10_vulns.html', cves_ids=ids, cves_descriptions=descriptions, cves_dates=dates)
 
-
-# ... (resto de tus importaciones y código de Flask) ...
-
 @app.route('/last10_vulns/downloadPDF')
 def generateVulnPDF():
     try:
