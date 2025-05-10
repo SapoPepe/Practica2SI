@@ -306,7 +306,7 @@ def generateTopClientesPDF(x):
     os.makedirs('Informes', exist_ok=True)
     pdf = generatePDF()
 
-    pdf.cell(200, 10, txt=f'Informe Top {x} Clientes con Incidencias', ln=True, align='C')
+    pdf.cell(200, 10, txt=f'Informe de Top Clientes con Incidencias', ln=True, align='C')
     pdf.ln(10)
 
     pdf.set_fill_color(200, 200, 200)
@@ -320,7 +320,7 @@ def generateTopClientesPDF(x):
         pdf.cell(50, 10, str(row['incidencias']), border=1, align='C')
         pdf.ln()
 
-    pdf_filename = f'Informes/Informe_Top_{x}_Clientes.pdf'
+    pdf_filename = f'Informes/Informe_Top_Clientes.pdf'
     pdf.output(pdf_filename)
 
     return send_file(pdf_filename, as_attachment=True)
@@ -478,19 +478,17 @@ def get_latest_cybersecurity_news():
 
 @app.route('/top_tipos/downloadPDF', methods=['GET'])
 def generateTopTiposPDF():
-    try:
-        num_tipos_str = request.args.get('num_tipos', '5')
-        x = int(num_tipos_str)
-        if x <= 0:
-            x = 5
-    except ValueError:
-        x = 5
+    num_tipos = request.args.get('num_tipos')
+    if num_tipos is not None:
+        num_tipos = int(num_tipos)
+        if num_tipos <= 0: num_tipos = 5
+    else: num_tipos = 5
 
-    tiempoMaxInci_ordenado = calculateTopTipos(x)
+    tiempoMaxInci_ordenado = calculateTopTipos(num_tipos)
 
     pdf = generatePDF()
 
-    pdf.cell(200, 10, txt=f'Informe Top {x} Tipos de incidencia con mayor tiempo de resolucion', ln=True, align='C')
+    pdf.cell(200, 10, txt=f'Informe de Top Tipos de incidencia con mayor tiempo de resolucion', ln=True, align='C')
     pdf.ln(10)
 
     pdf.set_fill_color(200, 200, 200)
@@ -504,7 +502,7 @@ def generateTopTiposPDF():
         pdf.cell(50, 10, str(row['tiempo']), border=1, align='C')
         pdf.ln()
 
-    pdf_filename = f'Informes/Informe_Top_{x}_Tipos.pdf'
+    pdf_filename = f'Informes/Informe_Top_Tipos.pdf'
     pdf.output(pdf_filename)
 
 
