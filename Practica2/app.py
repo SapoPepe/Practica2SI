@@ -341,20 +341,14 @@ def calculateTopTipos(x):
 
 @app.route('/top_tipos', methods=['GET'])
 def get_top_tipos():
-    num_tipos = request.args.get('num_clientes')
+    num_tipos = request.args.get('num_tipos')
     if num_tipos is not None:
         num_tipos = int(num_tipos)
         if num_tipos <= 0: num_tipos = 5
-    else:
-        num_tipos = 5
+    else: num_tipos = 5
 
     top_tipos_data = calculateTopTipos(num_tipos)
-    if top_tipos_data.empty:
-        tabla_html = "<p>No hay datos de tipos de incidencia para mostrar.</p>"
-    else:
-        tabla_html = top_tipos_data.to_html(index=False, classes='data')
-
-        # Pasar el número actual a la plantilla para el PDF y el valor del input
+    tabla_html = top_tipos_data.to_html(index=False, classes='data')
     return render_template('top_tipos.html', tabla_tipo_html=tabla_html, current_num_tipos=num_tipos)
 
 def obtainLastVulns():
