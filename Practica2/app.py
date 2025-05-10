@@ -288,13 +288,11 @@ def calculateTopClientes(x):
     return cliMaxIncidents_ordenado
 @app.route('/top_clientes')
 def get_top_clientes():
-    try:
-        x = request.args.get('num_clientes', '5')
+    x = request.args.get('num_clientes')
+    if x is not None:
         x = int(x)
-        if x <= 0: # Evitar valores no positivos
-            x = 5
-    except ValueError:
-        x = 5 # Valor por defecto si la conversión falla
+        if x <= 0: x = 5
+    else: x = 5
     #Ordenar y escoger los X clientes requeridos
     cliMaxIncidents_ordenado = calculateTopClientes(x)
 
@@ -343,13 +341,12 @@ def calculateTopTipos(x):
 
 @app.route('/top_tipos', methods=['GET'])
 def get_top_tipos():
-    try:
-        num_tipos_str = request.args.get('num_tipos', '5')
-        num_tipos = int(num_tipos_str)
-        if num_tipos <= 0: # Evitar valores no positivos
-            num_tipos = 5
-    except ValueError:
-        num_tipos = 5 # Valor por defecto si la conversión falla
+    num_tipos = request.args.get('num_clientes')
+    if num_tipos is not None:
+        num_tipos = int(num_tipos)
+        if num_tipos <= 0: num_tipos = 5
+    else:
+        num_tipos = 5
 
     top_tipos_data = calculateTopTipos(num_tipos)
     if top_tipos_data.empty:
